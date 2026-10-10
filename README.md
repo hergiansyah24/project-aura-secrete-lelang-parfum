@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sealed Bid -- Lelang Parfum Langka
 
-## Getting Started
+## 1. Deskripsi Produk
 
-First, run the development server:
+Sealed Bid merupakan aplikasi lelang parfum langka yang menggunakan
+mekanisme penawaran tertutup (commit-reveal). Pengguna dapat memasukkan
+harga penawaran tanpa dapat melihat penawaran pengguna lain. Nilai
+penawaran disimpan dalam bentuk commitment menggunakan fungsi hash SHA-256.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Setelah waktu lelang berakhir, pengguna melakukan reveal dengan
+memasukkan kembali nilai penawaran dan nonce. Sistem kemudian melakukan
+hash ulang dan membandingkannya dengan commitment yang telah disimpan
+sebelumnya. Jika hasilnya sesuai, penawaran dianggap valid dan dapat
+digunakan untuk menentukan pemenang lelang.
+
+## 2. Requirements
+
+| No | Kebutuhan | Keterangan |
+|---|---|---|
+| 1 | Login/Register | Pengguna harus melakukan autentikasi |
+| 2 | Melihat lelang | Pengguna dapat melihat parfum yang sedang dilelang |
+| 3 | Membuat penawaran | Pengguna dapat memasukkan nilai bid |
+| 4 | Commitment | Sistem membuat hash dari bid dan nonce |
+| 5 | Reveal | Pengguna mengungkapkan bid dan nonce setelah lelang berakhir |
+| 6 | Verifikasi | Sistem membandingkan hash reveal dengan commitment |
+| 7 | Menentukan pemenang | Penawaran valid tertinggi menjadi pemenang |
+| 8 | Keamanan | Sistem mencegah manipulasi dan kecurangan |
+
+## 3. Security Goals
+
+- Menjaga kerahasiaan nilai bid sebelum proses reveal.
+- Menjaga integritas data penawaran.
+- Memastikan hanya pengguna yang terautentikasi yang dapat melakukan bid.
+- Mencegah perubahan nilai bid setelah commitment dibuat.
+- Mencegah manipulasi hasil lelang.
+- Menggunakan nonce yang sulit ditebak untuk meningkatkan keamanan.
+
+## 4. Prioritas Keamanan
+
+1. Kerahasiaan nilai penawaran.
+2. Integritas commitment.
+3. Validasi proses reveal.
+4. Autentikasi pengguna.
+5. Pencegahan manipulasi dan kecurangan.
+6. Pembatasan percobaan atau rate limiting.
+
+## 5. Component Design
+
+Sistem Sealed Bid menggunakan mekanisme commit-reveal untuk menjaga
+kerahasiaan dan integritas nilai penawaran. Proses utama terdiri dari
+input, proses kriptografi, penyimpanan commitment, proses reveal,
+verifikasi, dan penentuan pemenang.
+
+### Alur Input → Process → Output
+
+| Tahap | Input | Process | Output |
+|---|---|---|---|
+| 1. Membuat Bid | Nilai bid + nonce | Sistem menggabungkan bid dan nonce | Data untuk proses hash |
+| 2. Commitment | Bid + nonce | Data diproses menggunakan SHA-256 | Commitment/hash |
+| 3. Penyimpanan | Commitment | Commitment disimpan ke sistem | Commitment tersimpan |
+| 4. Reveal | Bid + nonce | Sistem melakukan hash ulang | Hash hasil reveal |
+| 5. Verifikasi | Commitment + hash reveal | Sistem membandingkan kedua hash | Valid / Invalid |
+| 6. Penentuan Pemenang | Bid yang valid | Sistem membandingkan nilai bid | Pemenang lelang |
+
+### Alur Proses Commit-Reveal
+
+```text
+Pengguna
+   ↓
+Memasukkan Bid + Nonce
+   ↓
+Membuat Commitment
+   ↓
+SHA-256(Bid + Nonce)
+   ↓
+Commitment disimpan
+   ↓
+Lelang Berakhir
+   ↓
+Pengguna melakukan Reveal
+   ↓
+Bid + Nonce di-hash kembali
+   ↓
+SHA-256(Bid + Nonce)
+   ↓
+Bandingkan dengan Commitment
+   ↓
+┌─────────────────┐
+│ Apakah sama?    │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+   Ya        Tidak
+    ↓           ↓
+ VALID       INVALID
+    ↓
+Bid masuk
+ke penentuan
+pemenang
+    ↓
+Pemenang Lelang
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 6. Implementasi Kriptografi
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Sistem menggunakan algoritma SHA-256 untuk menghasilkan commitment dari
+nilai bid dan nonce. Nilai bid tidak disimpan secara langsung sebagai
+commitment sehingga penawaran dapat dirahasiakan sebelum proses reveal.
 
-## Learn More
+### Proses Commitment
 
-To learn more about Next.js, take a look at the following resources:
+Input:
+- Nilai bid
+- Nonce acak
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Proses:
+- Bid dan nonce digabungkan.
+- Data tersebut diproses menggunakan SHA-256.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Output:
+- Commitment berupa nilai hash.
 
-## Deploy on Vercel
+Contoh:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Bid = Rp500.000
+Nonce = random123
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+SHA-256("500000:random123")
+→ Commitment

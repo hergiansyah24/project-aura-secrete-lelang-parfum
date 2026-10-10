@@ -1,69 +1,285 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect, useCallback } from "react";
+import { Navbar } from "@/components/Navbar";
+import { AuctionCard, AuctionItem } from "@/components/AuctionCard";
+import {
+  Shield,
+  Lock,
+  Key,
+  Search,
+  Filter,
+  Sparkles,
+  RefreshCw,
+  Crown,
+  Database,
+  Terminal,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
+
+export default function HomePage() {
+  const [auctions, setAuctions] = useState<AuctionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState("newest");
+
+  const fetchAuctions = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (stageFilter && stageFilter !== "ALL") params.set("stage", stageFilter);
+      if (sortBy) params.set("sortBy", sortBy);
+
+      const res = await fetch(`/api/auctions?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAuctions(data.auctions || []);
+      }
+    } catch (err) {
+      console.error("Failed to load auctions:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, stageFilter, sortBy]);
+
+  useEffect(() => {
+    fetchAuctions();
+  }, [fetchAuctions]);
+
+  // Auto poll every 10 seconds to keep countdown & stages fresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAuctions();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [fetchAuctions]);
+
+  const commitCount = auctions.filter((a) => a.current_stage === "COMMIT").length;
+  const revealCount = auctions.filter((a) => a.current_stage === "REVEAL").length;
+  const completedCount = auctions.filter((a) => a.current_stage === "COMPLETED").length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
+      <Navbar />
+
+      {/* Hero Section */}
+      <section 
+        className="relative overflow-hidden border-b border-zinc-800/80 pt-12 pb-16 sm:pt-20 sm:pb-24 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('hero_section_project.jpg')" }}
+      >
+        {/* Overlay gelap opsional agar teks tetap terbaca kontras di atas background */}
+        <div className="absolute inset-0 bg-zinc-950/70 pointer-events-none" />
+
+        {/* Subtle Ambient Light Glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-96 bg-amber-500/10 rounded-full blur-[120px] pointer-events-none z-10" />
+        <div className="absolute top-1/4 right-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none z-10" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto space-y-5">
+            {/* Security Protocol Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-amber-500/30 text-amber-300 text-xs font-mono shadow-lg shadow-amber-500/5 backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>SKEMA COMMIT-REVEAL SHA-256 • ANTI-COLLUSION AUCTION</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-white leading-tight">
+              Lelang Parfum Langka dengan{" "}
+              <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-100 bg-clip-text text-transparent">
+                Penawaran Tertutup
+              </span>
+            </h1>
+
+            {/* Cryptographic Guarantees Badges */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 max-w-2xl mx-auto">
+              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 mb-1">
+                  <Lock className="w-3.5 h-3.5" /> Sealed Bid
+                </div>
+                <div className="text-[11px] text-zinc-400">Zero-Knowledge pre-image protection</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 mb-1">
+                  <Key className="w-3.5 h-3.5" /> Commit-Reveal
+                </div>
+                <div className="text-[11px] text-zinc-400">Verifikasi deterministik SHA-256</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 mb-1">
+                  <Shield className="w-3.5 h-3.5" /> AES-256-GCM
+                </div>
+                <div className="text-[11px] text-zinc-400">Data pribadi terenkripsi di database</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400 mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Anti-Cheat
+                </div>
+                <div className="text-[11px] text-zinc-400">Deteksi fraud & rate-limit aktif</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* Main Catalog Section */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex-1 w-full">
+        {/* Search, Filter, and Sorting Controls */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          {/* Stage Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-zinc-900/90 border border-zinc-800 rounded-xl overflow-x-auto text-xs">
+            <button
+              onClick={() => setStageFilter("ALL")}
+              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
+                stageFilter === "ALL"
+                  ? "bg-amber-500 text-zinc-950 font-bold shadow"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Semua Koleksi ({auctions.length})
+            </button>
+            <button
+              onClick={() => setStageFilter("COMMIT")}
+              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                stageFilter === "COMMIT"
+                  ? "bg-indigo-600 text-white font-bold shadow"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Lock className="w-3 h-3 text-indigo-400" />
+              Fase Commit ({commitCount})
+            </button>
+            <button
+              onClick={() => setStageFilter("REVEAL")}
+              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                stageFilter === "REVEAL"
+                  ? "bg-amber-500 text-zinc-950 font-bold shadow"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Key className="w-3 h-3" />
+              Fase Reveal ({revealCount})
+            </button>
+            <button
+              onClick={() => setStageFilter("COMPLETED")}
+              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                stageFilter === "COMPLETED"
+                  ? "bg-emerald-600 text-white font-bold shadow"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              Selesai ({completedCount})
+            </button>
+          </div>
+
+          {/* Search & Sort */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative min-w-[240px]">
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Cari parfum atau fragrance house..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            {/* Sort Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer"
+            >
+              <option value="newest">Koleksi Terbaru</option>
+              <option value="ending_soon">Batas Waktu Terdekat</option>
+              <option value="price_asc">Harga Terendah</option>
+              <option value="price_desc">Harga Tertinggi</option>
+            </select>
+
+            <button
+              onClick={() => fetchAuctions()}
+              className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-amber-400 hover:border-zinc-700 transition-colors"
+              title="Refresh Data"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* Auction Grid */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-400">
+            <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
+            <span className="text-xs font-mono">Memuat vault lelang terenkripsi...</span>
+          </div>
+        ) : auctions.length === 0 ? (
+          <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-12 text-center max-w-md mx-auto space-y-3">
+            <Sparkles className="w-8 h-8 text-amber-400 mx-auto" />
+            <h3 className="text-base font-bold text-zinc-200">Tidak Ada Lelang yang Cocok</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Coba sesuaikan kata kunci pencarian atau ganti filter fase di atas.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {auctions.map((auction) => (
+              <AuctionCard
+                key={auction.id}
+                auction={auction}
+                onRefresh={fetchAuctions}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Live Academic/Cyber Security Explainer Banner */}
+        <section className="mt-16 sm:mt-24 p-6 sm:p-8 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-400 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+            <div className="flex items-center gap-2 text-zinc-200 font-semibold text-sm">
+              <Terminal className="w-4 h-4 text-amber-400" />
+              <span>Pemeriksaan Integritas Sistem & Kriptografi Aktif</span>
+            </div>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Prepared Statements: 100% Parameterized (Anti SQLi)</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] leading-relaxed">
+            <div>
+              <strong className="text-zinc-200 block mb-1">Pre-Image Resistance (SHA-256):</strong>
+              Secara matematis mustahil merekayasa balik nominal bid dari hash yang tersimpan. Admin tidak memiliki celah kolusi karena data nominal tidak tersimpan di server selama fase commit.
+            </div>
+            <div>
+              <strong className="text-zinc-200 block mb-1">Defense in Depth (Cyber Defense):</strong>
+              Rate limiting membatasi serangan brute-force dan distributed denial of service. Validasi tipe data dan sanitasi string mencegah injection attack.
+            </div>
+            <div>
+              <strong className="text-zinc-200 block mb-1">Data-at-Rest Privacy (AES-256-GCM):</strong>
+              Data pribadi bidder (nomor kontak, alamat pengiriman) dienkripsi secara simetris dengan authenticated tag. Hanya didekripsi ketika pengguna yang sah masuk ke sesi.
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-800/80 bg-zinc-950 py-8 text-center text-xs text-zinc-400">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-amber-400" />
+            <span className="font-serif tracking-wider font-bold text-zinc-300">AURA SECRÈTE</span>
+            <span>— Exclusive Sealed-Bid Rare Perfume Auction</span>
+          </div>
+          <div className="font-mono text-[11px] text-zinc-400">
+            Mata Kuliah Pemrograman Web & Keamanan Siber
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
