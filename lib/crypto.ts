@@ -1,9 +1,17 @@
 import crypto from "node:crypto";
 
-// 256-bit encryption key (32 bytes) for AES-256-GCM
-// In production, this is loaded from process.env.ENCRYPTION_SECRET
-const MASTER_SECRET = process.env.ENCRYPTION_SECRET || "sealed_bid_luxury_perfume_master_key_2026_aes256gcm_secret!";
-const ENCRYPTION_KEY = crypto.createHash("sha256").update(MASTER_SECRET).digest();
+const MASTER_SECRET = process.env.ENCRYPTION_SECRET;
+
+if (!MASTER_SECRET || MASTER_SECRET.length < 32) {
+  throw new Error(
+    "ENCRYPTION_SECRET wajib diatur dan minimal 32 karakter."
+  );
+}
+
+const ENCRYPTION_KEY = crypto
+  .createHash("sha256")
+  .update(MASTER_SECRET)
+  .digest();
 
 /**
  * Encrypt sensitive user data using AES-256-GCM (Authenticated Encryption)

@@ -3,9 +3,15 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getDb } from "./db";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "sealed_bid_jwt_super_secret_auth_key_2026_production!"
-);
+const jwtSecretValue = process.env.JWT_SECRET;
+
+if (!jwtSecretValue || jwtSecretValue.length < 32) {
+  throw new Error(
+    "JWT_SECRET wajib diatur dan minimal 32 karakter."
+  );
+}
+
+const JWT_SECRET = new TextEncoder().encode(jwtSecretValue);
 
 export interface SessionUser {
   id: number;
