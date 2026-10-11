@@ -8,27 +8,17 @@ Kontrol yang dijelaskan di bawah merupakan rencana perbaikan. Kontrol baru dapat
 
 ## 2. Rencana Kontrol Keamanan
 
-### R01_Secret Bawaan
+### R01_Secret Kriptografi Bocor atau Dikelola Tidak Aman
 
-**Ancaman:** Secret bawaan dapat digunakan ketika konfigurasi rahasia aplikasi tidak tersedia.
+**Ancaman:** Secret kriptografi dapat terekspos atau dikelola secara tidak aman, sehingga berpotensi mengancam keamanan token sesi dan data terenkripsi.
 
 **Kontrol yang direncanakan:**
 
-1. Gunakan environment variable atau pengelola secret yang sesuai untuk menyimpan `ENCRYPTION_SECRET` dan `JWT_SECRET`.
-2. Hapus fallback secret tetap yang dapat diketahui dari kode sumber.
-3. Hentikan startup aplikasi dengan pesan kesalahan yang aman apabila secret wajib belum dikonfigurasi.
-4. Gunakan secret acak yang kuat dan berbeda untuk fungsi yang berbeda.
+1. Simpan `ENCRYPTION_SECRET` dan `JWT_SECRET` melalui environment variable atau pengelola secret yang sesuai.
+2. Pastikan secret tidak disimpan dalam repositori atau dikirim ke log.
+3. Gunakan secret acak yang kuat dan berbeda untuk fungsi yang berbeda.
+4. Hentikan startup aplikasi dengan aman apabila secret wajib tidak tersedia atau tidak memenuhi validasi.
 5. Jika secret diduga telah terekspos, lakukan rotasi secret dan evaluasi dampaknya terhadap data serta sesi yang sudah ada.
-
-**Tujuan kontrol:** Mengurangi kemungkinan penyalahgunaan token sesi dan fungsi kriptografi akibat secret yang diketahui pihak lain.
-
-**Metode pengujian:**
-
-- Jalankan aplikasi tanpa secret wajib dan pastikan aplikasi gagal secara aman.
-- Periksa repositori agar tidak memuat secret produksi.
-- Pastikan aplikasi menggunakan konfigurasi secret yang sesuai saat dijalankan.
-
-**Kriteria keberhasilan:** Aplikasi tidak menggunakan secret bawaan yang diketahui publik ketika konfigurasi wajib tidak tersedia.
 
 ### R02_Nonce Menggunakan `Math.random()`
 
@@ -130,7 +120,21 @@ Kontrol yang dijelaskan di bawah merupakan rencana perbaikan. Kontrol baru dapat
 | R04 | Pembatasan akses database dan cadangan | Pemeriksaan izin file dan pengujian akses |
 | R05 | Pemisahan akun demo dari produksi | Hasil pemeriksaan proses seed dan autentikasi akun |
 
-## 4. Hubungan dengan STRIDE
+## 4. Pemetaan Rencana Kontrol ke Tugas Berikutnya
+
+Pemetaan berikut merupakan rencana awal untuk menghubungkan lima risiko prioritas dengan kegiatan pada tugas berikutnya. Pemetaan ini perlu disesuaikan apabila instruksi resmi Tugas 2 dan Tugas 3 menetapkan pembagian yang berbeda.
+
+| ID Risiko | Fokus Kontrol | Rencana Pemetaan | Bukti yang Diharapkan |
+|---|---|---|---|
+| R01 | Pengelolaan secret dan konfigurasi aman | Tugas 2 | Pemeriksaan konfigurasi secret dan pengujian aplikasi tanpa secret yang valid |
+| R02 | Penggunaan nonce yang aman secara kriptografis | Tugas 2 | Pemeriksaan implementasi nonce dan pengujian ketika Web Crypto tidak tersedia |
+| R03 | Kerahasiaan bukti penawaran dan verifikasi commitment | Tugas 3 | Pengujian perubahan bukti dan pemeriksaan validasi commitment |
+| R04 | Pembatasan akses database dan cadangan | Tugas 3 | Pemeriksaan izin file database dan pembatasan akses |
+| R05 | Pemisahan akun demo dari lingkungan produksi | Tugas 2 | Pemeriksaan konfigurasi seed dan pengujian autentikasi akun demo |
+
+Pemetaan di atas masih berupa rencana, bukan pernyataan bahwa seluruh kontrol sudah diterapkan atau diuji. Pelaksanaan akhirnya mengikuti ruang lingkup dan instruksi resmi masing-masing tugas.
+
+## 5. Hubungan dengan STRIDE
 
 | Kategori STRIDE | Kontrol yang Relevan |
 |---|---|
@@ -143,7 +147,7 @@ Kontrol yang dijelaskan di bawah merupakan rencana perbaikan. Kontrol baru dapat
 
 Kontrol pada tabel ini mencakup rencana keamanan yang lebih luas. Untuk lima risiko prioritas, penerapan dan pengujian tetap mengikuti rincian R01–R05 di atas.
 
-## 5. Kesimpulan
+## 6. Kesimpulan
 
 Rencana kontrol keamanan difokuskan pada pengelolaan secret, kualitas nonce, kerahasiaan bukti penawaran, pembatasan akses database, dan pengamanan akun demo. Setiap kontrol memiliki metode pengujian agar efektivitasnya dapat dinilai berdasarkan bukti.
 

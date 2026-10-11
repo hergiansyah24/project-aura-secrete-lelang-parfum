@@ -1,17 +1,17 @@
-# STRIDE Threat Analysis - Sealed Bid (my project)
+﻿# STRIDE Threat Analysis - Sealed Bid (my project)
 
 ## 1. Tujuan
 
-Analisis STRIDE digunakan untuk mengidentifikasi ancaman keamanan pada aplikasi Sealed Bid berdasarkan komponen, aliran data, dan batas kepercayaan yang dijelaskan dalam `architecture.md`.
+Analisis STRIDE digunakan untuk mengidentifikasi ancaman keamanan pada aplikasi Sealed Bid berdasarkan komponen, aliran data, dan batas kepercayaan yang dijelaskan dalam `dfd.md`.
 
 STRIDE terdiri dari enam kategori:
 
-- **S — Spoofing:** penyamaran identitas pengguna atau sistem.
-- **T — Tampering:** perubahan data tanpa izin.
-- **R — Repudiation:** penyangkalan aktivitas yang tidak dapat dibuktikan secara memadai.
-- **I — Information Disclosure:** pengungkapan informasi kepada pihak yang tidak berwenang.
-- **D — Denial of Service:** gangguan yang membuat layanan tidak tersedia.
-- **E — Elevation of Privilege:** peningkatan hak akses tanpa izin.
+- **S â€” Spoofing:** penyamaran identitas pengguna atau sistem.
+- **T â€” Tampering:** perubahan data tanpa izin.
+- **R â€” Repudiation:** penyangkalan aktivitas yang tidak dapat dibuktikan secara memadai.
+- **I â€” Information Disclosure:** pengungkapan informasi kepada pihak yang tidak berwenang.
+- **D â€” Denial of Service:** gangguan yang membuat layanan tidak tersedia.
+- **E â€” Elevation of Privilege:** peningkatan hak akses tanpa izin.
 
 Ancaman di bawah merupakan skenario yang perlu diperiksa. Pencantuman suatu ancaman tidak otomatis berarti aplikasi terbukti rentan.
 
@@ -19,18 +19,18 @@ Ancaman di bawah merupakan skenario yang perlu diperiksa. Pencantuman suatu anca
 
 | ID | Kategori | Komponen yang Terdampak | Ancaman | Aset Terdampak |
 |---|---|---|---|---|
-| T01 | Spoofing | `lib/auth.ts`, cookie sesi | Penyerang menggunakan token sesi yang dicuri untuk menyamar sebagai pengguna yang sah. | A01, A04 |
-| T02 | Spoofing | Endpoint autentikasi dan API | Server menerima identitas pengguna yang tidak diverifikasi dengan benar. | A01, A04 |
-| T03 | Tampering | Browser, `lib/client-crypto.ts` | Pengguna mengubah bukti penawaran lokal atau file JSON sebelum proses reveal. | A06, A07, A08 |
-| T04 | Tampering | Endpoint commit dan reveal | Permintaan yang dimanipulasi mencoba mengubah nilai penawaran, status lelang, atau data pengguna lain. | A05, A06, A07 |
-| T05 | Repudiation | `lib/audit.ts`, tabel `audit_logs` | Pengguna menyangkal aktivitas karena catatan audit tidak cukup untuk membuktikan siapa melakukan tindakan dan kapan. | A10 |
-| T06 | Repudiation | Endpoint administrasi dan database | Perubahan data penting tidak tercatat secara lengkap sehingga sulit ditelusuri. | A05, A06, A10 |
-| T07 | Information Disclosure | localStorage dan file JSON bukti | Pihak lain yang mendapat akses ke browser atau file dapat membaca nilai penawaran dan nonce sebelum reveal. | A08 |
-| T08 | Information Disclosure | SQLite dan cadangan database | Pihak yang memperoleh akses ke file database dapat membaca data yang tidak terenkripsi atau metadata sensitif. | A01, A03, A05, A06, A11 |
-| T09 | Denial of Service | Endpoint login, commit, dan reveal | Permintaan otomatis dalam jumlah besar menghabiskan sumber daya server dan mengganggu pengguna sah. | A05, A06 |
-| T10 | Denial of Service | Server dan SQLite | Operasi database yang berlebihan atau transaksi yang saling menunggu dapat memperlambat atau menghentikan layanan. | A05, A06, A11 |
-| T11 | Elevation of Privilege | Endpoint administrasi, pemeriksaan peran | Pengguna biasa mencoba menjalankan fungsi yang seharusnya hanya tersedia bagi administrator. | A01, A05 |
-| T12 | Elevation of Privilege | Endpoint data penawaran | Pengguna mencoba membaca atau mengubah penawaran milik pengguna lain dengan mengganti identifier pada permintaan. | A01, A06 |
+| T01 | Spoofing | `P04` — autentikasi, aliran `F02` | Penyerang menggunakan token sesi yang dicuri untuk menyamar sebagai pengguna yang sah. | A01, A04 |
+| T02 | Spoofing | `P03`, `P04` — endpoint API dan autentikasi | Server menerima identitas pengguna yang tidak diverifikasi dengan benar. | A01, A04 |
+| T03 | Tampering | `P02`, `D01`, `D02` — kriptografi sisi klien dan penyimpanan bukti | Pengguna mengubah bukti penawaran lokal atau file JSON sebelum proses reveal. | A06, A07, A08 |
+| T04 | Tampering | `P03`, `D03` — endpoint API dan database | Permintaan yang dimanipulasi mencoba mengubah nilai penawaran, status lelang, atau data pengguna lain. | A05, A06, A07 |
+| T05 | Repudiation | `P06`, `D03` — audit dan database | Pengguna menyangkal aktivitas karena catatan audit tidak cukup untuk membuktikan siapa melakukan tindakan dan kapan. | A10 |
+| T06 | Repudiation | `P03`, `P06`, `D03` — API, audit, dan database | Perubahan data penting tidak tercatat secara lengkap sehingga sulit ditelusuri. | A05, A06, A10 |
+| T07 | Information Disclosure | `D01`, `D02` — bukti di browser dan file JSON | Pihak lain yang mendapat akses ke browser atau file dapat membaca nilai penawaran dan nonce sebelum reveal. | A08 |
+| T08 | Information Disclosure | `D03` — database SQLite | Pihak yang memperoleh akses ke file database dapat membaca data yang tidak terenkripsi atau metadata sensitif. | A01, A03, A05, A06, A11 |
+| T09 | Denial of Service | `P03` — endpoint API | Permintaan otomatis dalam jumlah besar menghabiskan sumber daya server dan mengganggu pengguna sah. | A05, A06 |
+| T10 | Denial of Service | `P03`, `D03` — API dan SQLite | Operasi database yang berlebihan atau transaksi yang saling menunggu dapat memperlambat atau menghentikan layanan. | A05, A06, A11 |
+| T11 | Elevation of Privilege | `P03`, `P04` — API dan autentikasi | Pengguna biasa mencoba menjalankan fungsi yang seharusnya hanya tersedia bagi administrator. | A01, A05 |
+| T12 | Elevation of Privilege | `P03`, `D03` — API dan database | Pengguna mencoba membaca atau mengubah penawaran milik pengguna lain dengan mengganti identifier pada permintaan. | A01, A06 |
 
 ## 3. Analisis Ancaman Berdasarkan Kategori
 
@@ -141,7 +141,7 @@ Ancaman berikut perlu mendapat perhatian awal karena berhubungan langsung dengan
 5. **T09 dan T10:** gangguan ketersediaan layanan.
 6. **T05 dan T06:** kelengkapan dan keandalan catatan audit.
 
-Urutan ini merupakan urutan pemeriksaan awal. Prioritas risiko akhir ditentukan setelah likelihood dan impact dinilai pada `risk-assessment.md`.
+Urutan ini merupakan urutan pemeriksaan awal. Prioritas risiko akhir ditentukan setelah likelihood dan impact dinilai pada `risk_register.md`.
 
 ## 5. Kesimpulan
 

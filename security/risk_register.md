@@ -1,4 +1,4 @@
-# Risk Assessment - Sealed Bid (my project)
+﻿# Risk Assessment - Sealed Bid (my project)
 
 ## 1. Tujuan
 
@@ -32,14 +32,14 @@ Nilai yang dicantumkan merupakan penilaian awal berdasarkan arsitektur dan temua
 
 ### Perhitungan Risiko
 
-**Risk Score = Likelihood × Impact**
+**Risk Score = Likelihood Ã— Impact**
 
 | Skor | Tingkat Risiko |
 |---|---|
-| 1–4 | Rendah |
-| 5–9 | Sedang |
-| 10–16 | Tinggi |
-| 17–25 | Sangat tinggi |
+| 1â€“4 | Rendah |
+| 5â€“9 | Sedang |
+| 10â€“16 | Tinggi |
+| 17â€“25 | Sangat tinggi |
 
 ## 3. Daftar Lima Risiko Prioritas
 
@@ -51,20 +51,19 @@ Nilai yang dicantumkan merupakan penilaian awal berdasarkan arsitektur dan temua
 | R04 | Data sensitif pada database atau cadangannya diakses tanpa izin. | 2 | 5 | 10 | Tinggi |
 | R05 | Kredensial akun demo tetap aktif pada lingkungan produksi. | 2 | 5 | 10 | Tinggi |
 
-**Catatan:** Skor tersebut adalah estimasi awal, bukan hasil pengukuran empiris. R01 dan R02 berkaitan dengan perilaku yang terlihat pada kode, sedangkan risiko R03–R05 bergantung pada kondisi akses, konfigurasi, dan deployment. Nilai likelihood harus disesuaikan setelah kondisi tersebut diverifikasi.
+**Catatan:** Skor tersebut adalah estimasi awal, bukan hasil pengukuran empiris. R01 dan R02 berkaitan dengan perilaku yang terlihat pada kode, sedangkan risiko R03â€“R05 bergantung pada kondisi akses, konfigurasi, dan deployment. Nilai likelihood harus disesuaikan setelah kondisi tersebut diverifikasi.
 
 ## 4. Analisis Setiap Risiko
 
-### R01 Secret Bawaan
+### R01 Secret Kriptografi Bocor atau Dikelola Tidak Aman
 
-**Komponen:** `lib/crypto.ts`, `lib/auth.ts`
+**Komponen:** `lib/crypto.ts`, `lib/auth.ts`, konfigurasi environment
 
 **Kategori STRIDE:** Spoofing dan Information Disclosure
 
-- **Likelihood: 3 (Sedang).** Kode memiliki nilai bawaan ketika secret dari environment variable tidak tersedia. Risiko aktual bergantung pada apakah konfigurasi tersebut benar-benar terjadi saat aplikasi dijalankan.
-- **Impact: 5 (Sangat tinggi).** Jika secret bawaan digunakan dan diketahui pihak lain, keamanan token sesi atau data terenkripsi yang bergantung pada secret tersebut dapat terancam.
-- **Alasan prioritas:** Secret berperan penting dalam perlindungan autentikasi dan data sensitif.
-
+- **Likelihood: 2 (Rendah, sementara).** Kode sudah memvalidasi keberadaan dan panjang minimum secret. Namun, risiko kebocoran melalui konfigurasi deployment, akses lingkungan, atau pengelolaan secret tetap perlu diperiksa.
+- **Impact: 5 (Sangat tinggi).** Jika secret yang aktif berhasil diperoleh pihak lain, perlindungan token sesi atau data terenkripsi yang bergantung pada secret tersebut dapat terancam.
+- **Alasan prioritas:** Secret merupakan komponen penting dalam autentikasi dan perlindungan data sensitif.
 ### R02 Nonce dengan Fallback `Math.random()`
 
 **Komponen:** `lib/client-crypto.ts`
@@ -109,11 +108,11 @@ Nilai yang dicantumkan merupakan penilaian awal berdasarkan arsitektur dan temua
 
 Urutan berikut digunakan sebagai rencana awal berdasarkan skor dan potensi dampak:
 
-1. **R01 — Secret bawaan:** pastikan secret wajib dikonfigurasi dengan aman.
-2. **R03 — Bukti penawaran:** tinjau penyimpanan bukti dan perlindungan sebelum reveal.
-3. **R04 — Database:** periksa izin akses file, lokasi, dan cadangan.
-4. **R05 — Akun demo:** pastikan akun demo tidak dapat digunakan pada produksi.
-5. **R02 — Nonce:** hilangkan penggunaan sumber acak nonkriptografis.
+1. **R01 â€” Secret bawaan:** pastikan secret wajib dikonfigurasi dengan aman.
+2. **R03 â€” Bukti penawaran:** tinjau penyimpanan bukti dan perlindungan sebelum reveal.
+3. **R04 â€” Database:** periksa izin akses file, lokasi, dan cadangan.
+4. **R05 â€” Akun demo:** pastikan akun demo tidak dapat digunakan pada produksi.
+5. **R02 â€” Nonce:** hilangkan penggunaan sumber acak nonkriptografis.
 
 Urutan ini dapat berubah setelah pengujian menunjukkan kemungkinan dan dampak yang berbeda dari perkiraan awal.
 
@@ -121,4 +120,4 @@ Urutan ini dapat berubah setelah pengujian menunjukkan kemungkinan dan dampak ya
 
 Lima risiko prioritas berkaitan dengan pengelolaan secret, pembuatan nonce, kerahasiaan bukti penawaran, akses database, dan kredensial akun demo. Risiko tersebut dipilih karena dapat memengaruhi kerahasiaan data, autentikasi, dan keadilan proses lelang.
 
-Setiap risiko perlu diverifikasi dengan pengujian yang sesuai. Setelah itu, nilai likelihood dan impact dapat diperbarui dan digunakan sebagai dasar pemilihan kontrol keamanan pada `security-controls.md`.
+Setiap risiko perlu diverifikasi dengan pengujian yang sesuai. Setelah itu, nilai likelihood dan impact dapat diperbarui dan digunakan sebagai dasar pemilihan kontrol keamanan pada `security_controls.md`.
