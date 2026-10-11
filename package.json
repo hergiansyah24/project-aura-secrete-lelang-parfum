@@ -2,11 +2,13 @@
   "name": "lelang-parfume",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "eslint",
+  "test:crypto": "node --env-file=.env.local --experimental-strip-types --test tests/crypto.test.ts"
+  
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -28,3 +30,4 @@
     "typescript": "^5"
   }
 }
+

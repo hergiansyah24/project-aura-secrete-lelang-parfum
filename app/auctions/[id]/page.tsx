@@ -90,8 +90,13 @@ function AuctionDetailContent() {
   };
 
   useEffect(() => {
-    fetchAuction();
-  }, [id]);
+  const timer = setTimeout(() => {
+    void fetchAuction();
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, [id]);
+
 
   if (loading) {
     return (
@@ -454,6 +459,14 @@ function AuctionDetailContent() {
         />
       )}
     </div>
+  );
+}
+
+  export default function AuctionDetailPage() {
+  return (
+    <Suspense fallback={<div>Memuat detail lelang...</div>}>
+      <AuctionDetailContent />
+    </Suspense>
   );
 }
 

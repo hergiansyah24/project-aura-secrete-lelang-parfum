@@ -45,16 +45,49 @@ export default function HomePage() {
   }, [search, stageFilter, sortBy]);
 
   useEffect(() => {
+  const interval = setInterval(() => {
     fetchAuctions();
-  }, [fetchAuctions]);
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, [fetchAuctions]);
 
   // Auto poll every 10 seconds to keep countdown & stages fresh
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchAuctions();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [fetchAuctions]);
+  const controller = new AbortController();
+
+  const loadAuctions = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (stageFilter && stageFilter !== "ALL") {
+        params.set("stage", stageFilter);
+      }
+      if (sortBy) params.set("sortBy", sortBy);
+
+      const res = await fetch(`/api/auctions?${params.toString()}`, {
+        signal: controller.signal,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAuctions(data.auctions || []);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.error("Failed to load auctions:", err);
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  };
+
+  void loadAuctions();
+
+  return () => controller.abort();
+}, [search, stageFilter, sortBy]);
 
   const commitCount = auctions.filter((a) => a.current_stage === "COMMIT").length;
   const revealCount = auctions.filter((a) => a.current_stage === "REVEAL").length;

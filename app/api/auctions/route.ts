@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const auctions = db.prepare(query).all(...params) as Array<Record<string, unknown>>;
 
     // If user is logged in, fetch their personal bids for these auctions
-    let userBidsMap = new Map<number, { commitment_hash: string; status: string; revealed_amount: number | null }>();
+    const userBidsMap = new Map<number, { commitment_hash: string; status: string; revealed_amount: number | null }>();
     if (currentUser) {
       const myBids = db
         .prepare(`SELECT auction_id, commitment_hash, status, revealed_amount FROM bids WHERE user_id = ?`)

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { useAuth } from "@/components/AuthContext";
@@ -101,41 +101,49 @@ export function AdminDashboardPage() {
     revealDurationHours: 2,
   });
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      // Fetch auctions
-      const resAuctions = await fetch("/api/auctions");
-      if (resAuctions.ok) {
-        const data = await resAuctions.json();
-        setAuctions(data.auctions || []);
-      }
+ 
+const fetchData = useCallback(async () => {
+  try {
+    setLoading(true);
 
-      // Fetch audit logs
-      const resLogs = await fetch(`/api/admin/audit-logs?severity=${logSeverity}`);
-      if (resLogs.ok) {
-        const data = await resLogs.json();
-        setAuditLogs(data.logs || []);
-      }
-
-      // Fetch users
-      const resUsers = await fetch("/api/admin/users");
-      if (resUsers.ok) {
-        const data = await resUsers.json();
-        setUsersList(data.users || []);
-      }
-    } catch (err) {
-      console.error("Failed to load admin data:", err);
-    } finally {
-      setLoading(false);
+    // Fetch auctions
+    const resAuctions = await fetch("/api/auctions");
+    if (resAuctions.ok) {
+      const data = await resAuctions.json();
+      setAuctions(data.auctions || []);
     }
-  };
 
-  useEffect(() => {
-    if (user?.role === "admin") {
-      fetchData();
+    // Fetch audit logs
+    const resLogs = await fetch(
+      `/api/admin/audit-logs?severity=${logSeverity}`
+    );
+    if (resLogs.ok) {
+      const data = await resLogs.json();
+      setAuditLogs(data.logs || []);
     }
-  }, [user, logSeverity]);
+
+    // Fetch users
+    const resUsers = await fetch("/api/admin/users");
+    if (resUsers.ok) {
+      const data = await resUsers.json();
+      setUsersList(data.users || []);
+    }
+  } catch (err) {
+    console.error("Failed to load admin data:", err);
+  } finally {
+    setLoading(false);
+  }
+}, [logSeverity]);
+
+useEffect(() => {
+  if (user?.role !== "admin") return;
+
+  const timer = window.setTimeout(() => {
+    void fetchData();
+  }, 0);
+
+  return () => window.clearTimeout(timer);
+}, [user?.role, fetchData]);
 
   const handleForceStage = async (auctionId: number, targetStage: string) => {
     try {

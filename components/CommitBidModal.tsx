@@ -31,32 +31,73 @@ interface CommitBidModalProps {
 }
 
 export function CommitBidModal({ auction, onClose, onSuccess }: CommitBidModalProps) {
-  const [bidAmount, setBidAmount] = useState<number>(auction.starting_price + 5000000);
-  const [nonce, setNonce] = useState<string>("");
-  const [computedHash, setComputedHash] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [submittedProof, setSubmittedProof] = useState<BidProof | null>(null);
+const [bidAmount, setBidAmount] = useState<number>(
+  auction.starting_price + 5000000
+);
 
-  // Generate cryptographic nonce on mount
-  useEffect(() => {
-    setNonce(generateClientNonce());
-  }, []);
+const [nonce, setNonce] = useState<string>(() => {
+  try {
+    return generateClientNonce();
+  } catch {
+    return "";
+  }
+});
 
-  // Real-time calculation of SHA-256 Commitment Hash inside user browser
-  useEffect(() => {
-    if (bidAmount && nonce) {
-      computeClientCommitment(auction.id, bidAmount, nonce).then((hash) => {
-        setComputedHash(hash);
-      });
-    } else {
-      setComputedHash("");
-    }
-  }, [auction.id, bidAmount, nonce]);
+const [loading, setLoading] = useState<boolean>(false);
+const [error, setError] = useState<string | null>(() =>
+  nonce
+    ? null
+    : "Nonce aman tidak dapat dibuat. Gunakan peramban modern yang mendukung Web Crypto."
+);
 
-  const handleRegenerateNonce = () => {
-    setNonce(generateClientNonce());
+const [submittedProof, setSubmittedProof] = useState<BidProof | null>(null);
+
+const commitmentInput =
+  nonce && bidAmount ? `${auction.id}:${bidAmount}:${nonce}` : "";
+
+const [hashResult, setHashResult] = useState<{
+  input: string;
+  hash: string;
+}>({ input: "", hash: "" });
+
+useEffect(() => {
+  if (!nonce || !/^[0-9a-f]{64}$/.test(nonce) || !bidAmount) {
+    return;
+  }
+
+  let cancelled = false;
+
+  computeClientCommitment(auction.id, bidAmount, nonce)
+    .then((hash) => {
+      if (!cancelled) {
+        setHashResult({ input: commitmentInput, hash });
+      }
+    })
+    .catch(() => {
+      if (!cancelled) {
+        setError("Gagal menghitung hash komitmen.");
+      }
+    });
+
+  return () => {
+    cancelled = true;
   };
+}, [auction.id, bidAmount, nonce, commitmentInput]);
+
+const computedHash =
+  hashResult.input === commitmentInput ? hashResult.hash : "";
+
+const handleRegenerateNonce = () => {
+  try {
+    setNonce(generateClientNonce());
+    setError(null);
+  } catch {
+    setNonce("");
+    setError(
+      "Nonce aman tidak dapat dibuat. Gunakan peramban modern yang mendukung Web Crypto."
+    );
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +107,11 @@ export function CommitBidModal({ auction, onClose, onSuccess }: CommitBidModalPr
       setError(`Nominal penawaran tidak boleh lebih rendah dari Starting Price (Rp ${auction.starting_price.toLocaleString("id-ID")}).`);
       return;
     }
+
+    if (!nonce || !/^[0-9a-f]{64}$/.test(nonce)) {
+  setError("Nonce tidak valid. Silakan acak ulang nonce.");
+  return;
+}
 
     if (!computedHash || computedHash.length !== 64) {
       setError("Hash komitmen belum siap.");

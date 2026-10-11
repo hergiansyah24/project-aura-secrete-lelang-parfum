@@ -65,13 +65,17 @@ export function MyBidsPage() {
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
+  const timer = setTimeout(() => {
     if (user) {
-      fetchMyBids();
+      void fetchMyBids();
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, [user]);
 
   if (!user && !loading) {
     return (

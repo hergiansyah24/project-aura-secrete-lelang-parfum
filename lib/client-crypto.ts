@@ -18,17 +18,26 @@ export interface BidProof {
 /**
  * Generate cryptographically secure random 256-bit nonce (64 hex characters)
  */
+
 export function generateClientNonce(): string {
-  if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
-    const array = new Uint8Array(32);
-    window.crypto.getRandomValues(array);
-    return Array.from(array)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+  if (
+    typeof window === "undefined" ||
+    !window.crypto ||
+    typeof window.crypto.getRandomValues !== "function"
+  ) {
+    throw new Error(
+      "Web Crypto tidak tersedia. Nonce aman tidak dapat dibuat."
+    );
   }
-  // Fallback if crypto is unavailable
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+  const array = new Uint8Array(32);
+  window.crypto.getRandomValues(array);
+
+  return Array.from(array)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
+
 
 /**
  * Compute SHA-256 hash in browser using Web Crypto API

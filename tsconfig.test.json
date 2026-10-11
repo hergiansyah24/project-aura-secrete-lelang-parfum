@@ -1,0 +1,14 @@
+
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "tests/crypto.test.ts",
+    "lib/crypto.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

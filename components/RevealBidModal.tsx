@@ -39,13 +39,19 @@ export function RevealBidModal({
   const [tamperSimulation, setTamperSimulation] = useState(false);
 
   // Auto-fill from local storage on mount
-  useEffect(() => {
+  // Auto-fill from local storage on mount
+useEffect(() => {
+  const timeoutId = window.setTimeout(() => {
     const proof = getBidProofFromStorage(auction.id);
+
     if (proof) {
       setBidAmount(proof.bidAmount);
       setNonce(proof.nonce);
     }
-  }, [auction.id]);
+  }, 0);
+
+  return () => window.clearTimeout(timeoutId);
+}, [auction.id]);
 
   // Handle uploaded JSON proof file
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
