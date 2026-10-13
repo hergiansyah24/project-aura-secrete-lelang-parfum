@@ -1,0 +1,97 @@
+/* Gaya khusus landing page. Selector dibatasi di .lp/.lp-top. */
+.lp {
+  background: #f6f1ea;
+  color: #1e1a17;
+}
+
+.lp ::selection {
+  background: #9b512f;
+  color: #fff;
+}
+
+.lp-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9b512f;
+}
+
+.lp-eyebrow::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: #9b512f;
+}
+
+.lp-panel {
+  background: #fdfbf8;
+  border-radius: 2rem;
+  padding: 0.75rem;
+  box-shadow: 0 24px 60px -30px rgba(60, 40, 20, 0.35);
+}
+
+@media (min-width: 640px) {
+  .lp-panel {
+    padding: 1rem;
+  }
+}
+
+.lp-lift {
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.lp-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -18px rgba(60, 40, 20, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-lift {
+    transition: none;
+  }
+
+  .lp-lift:hover {
+    transform: none;
+  }
+}
+
+.lp-top {
+  position: relative;
+}
+
+.lp-top > header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  border-bottom-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.lp-hero-glow {
+  background: linear-gradient(
+    90deg,
+    rgba(246, 241, 234, 0.97) 0%,
+    rgba(246, 241, 234, 0.9) 38%,
+    rgba(246, 241, 234, 0.3) 68%,
+    rgba(246, 241, 234, 0) 100%
+  );
+}
+
+@media (max-width: 768px) {
+  .lp-hero-glow {
+    background: linear-gradient(
+      180deg,
+      rgba(246, 241, 234, 0.95) 0%,
+      rgba(246, 241, 234, 0.85) 60%,
+      rgba(246, 241, 234, 0.7) 100%
+    );
+  }
+}

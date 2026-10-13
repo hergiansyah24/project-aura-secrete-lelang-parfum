@@ -128,3 +128,68 @@ Nonce = random123
 
 SHA-256("500000:random123")
 → Commitment
+
+----------
+# Pemrograman Web
+
+# Aura Secrète — Lelang Parfum Langka
+
+## 1. Deskripsi Produk
+
+
+
+Aura Secrète adalah aplikasi lelang parfum langka yang menggunakan mekanisme sealed bid atau penawaran tertutup. Aplikasi ini membantu pengguna menemukan parfum yang dilelang, mengajukan penawaran, dan memeriksa hasil lelang melalui antarmuka web.
+
+## 2. Masalah dan Target Pengguna
+
+Parfum langka dan edisi terbatas memiliki peminat khusus. Proses lelang perlu menyediakan informasi yang jelas, navigasi yang mudah, dan mekanisme penawaran yang menjaga kerahasiaan nilai bid sebelum proses reveal.
+
+Target pengguna:
+- Penggemar dan kolektor parfum langka.
+- Pengguna yang ingin mengikuti lelang parfum secara daring.
+- Administrator yang mengelola lelang dan memantau aktivitas aplikasi.
+
+## 3. Fitur Utama
+
+- Halaman utama dan katalog parfum lelang.
+- Pencarian, filter, dan pengurutan lelang.
+- Registrasi dan login pengguna.
+- Pengajuan penawaran tertutup (commit).
+- Reveal dan verifikasi penawaran.
+- Countdown dan informasi status lelang.
+- Halaman profil dan riwayat penawaran.
+- Fitur administrasi dan pencatatan aktivitas keamanan.
+- Penjelasan mekanisme kriptografi dan verifikasi bukti.
+
+## 4. Teknologi
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- API dan database SQLite
+- JWT untuk autentikasi
+- SHA-256 untuk commitment penawaran
+- AES-256-GCM untuk perlindungan data sensitif
+
+## 5. Struktur Proyek
+
+- `app/` — halaman aplikasi dan API.
+- `components/` — komponen antarmuka yang dapat digunakan kembali.
+- `components/landing/` — komponen landing page.
+- `public/landing/` — aset gambar landing page.
+- `lib/` — logika autentikasi, kriptografi, database, dan audit.
+- `crypto/` — dokumentasi mata kuliah Kriptografi.
+- `security/` — dokumentasi analisis dan kontrol keamanan.
+- `tests/` — pengujian kriptografi.
+- `types/` — definisi tipe TypeScript.
+
+## 6. Instalasi dan Menjalankan Aplikasi
+
+Persyaratan: Node.js dan npm.
+
+1. Clone repository dan masuk ke folder proyek.
+2. Instal dependensi:
+
+   ```bash
+   npm install

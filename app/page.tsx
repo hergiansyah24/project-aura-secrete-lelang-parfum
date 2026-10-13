@@ -3,19 +3,22 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { AuctionCard, AuctionItem } from "@/components/AuctionCard";
+import { BrandCards } from "@/components/landing/BrandCards";
+import { ClosingCta } from "@/components/landing/ClosingCta";
+import { FeaturedAuction } from "@/components/landing/FeaturedAuction";
+import { Hero } from "@/components/landing/Hero";
+import { HowItWorks } from "@/components/landing/HowItWorks";
+import { LandingFooter } from "@/components/landing/LandingFooter";
+import { SecuritySection } from "@/components/landing/SecuritySection";
+import "@/components/landing/landing.css";
 import {
-  Shield,
   Lock,
   Key,
   Search,
-  Filter,
   Sparkles,
   RefreshCw,
-  Crown,
-  Database,
   Terminal,
   CheckCircle2,
-  AlertCircle
 } from "lucide-react";
 
 export default function HomePage() {
@@ -94,71 +97,21 @@ export default function HomePage() {
   const completedCount = auctions.filter((a) => a.current_stage === "COMPLETED").length;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
-      <Navbar />
+    <div className="lp min-h-screen flex flex-col font-sans">
+      <div className="lp-top">
+        <Navbar />
+        <Hero />
+      </div>
 
-      {/* Hero Section */}
-      <section 
-        className="relative overflow-hidden border-b border-zinc-800/80 pt-12 pb-16 sm:pt-20 sm:pb-24 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('hero_section_project.jpg')" }}
-      >
-        {/* Overlay gelap opsional agar teks tetap terbaca kontras di atas background */}
-        <div className="absolute inset-0 bg-zinc-950/70 pointer-events-none" />
-
-        {/* Subtle Ambient Light Glows */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-96 bg-amber-500/10 rounded-full blur-[120px] pointer-events-none z-10" />
-        <div className="absolute top-1/4 right-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none z-10" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto space-y-5">
-            {/* Security Protocol Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-amber-500/30 text-amber-300 text-xs font-mono shadow-lg shadow-amber-500/5 backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>SKEMA COMMIT-REVEAL SHA-256 • ANTI-COLLUSION AUCTION</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-white leading-tight">
-              Lelang Parfum Langka dengan{" "}
-              <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-100 bg-clip-text text-transparent">
-                Penawaran Tertutup
-              </span>
-            </h1>
-
-            {/* Cryptographic Guarantees Badges */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 max-w-2xl mx-auto">
-              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 mb-1">
-                  <Lock className="w-3.5 h-3.5" /> Sealed Bid
-                </div>
-                <div className="text-[11px] text-zinc-400">Zero-Knowledge pre-image protection</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 mb-1">
-                  <Key className="w-3.5 h-3.5" /> Commit-Reveal
-                </div>
-                <div className="text-[11px] text-zinc-400">Verifikasi deterministik SHA-256</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 mb-1">
-                  <Shield className="w-3.5 h-3.5" /> AES-256-GCM
-                </div>
-                <div className="text-[11px] text-zinc-400">Data pribadi terenkripsi di database</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 text-left">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400 mb-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Anti-Cheat
-                </div>
-                <div className="text-[11px] text-zinc-400">Deteksi fraud & rate-limit aktif</div>
-              </div>
-            </div>
-          </div>
+      <div className="relative z-10 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 -mt-24">
+        <div className="lp-panel space-y-3 sm:space-y-4">
+          <BrandCards />
+          <FeaturedAuction />
         </div>
-      </section>
+      </div>
 
       {/* Main Catalog Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex-1 w-full">
+      <main id="katalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex-1 w-full">
         {/* Search, Filter, and Sorting Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           {/* Stage Tabs */}
@@ -300,19 +253,12 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-800/80 bg-zinc-950 py-8 text-center text-xs text-zinc-400">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Crown className="w-4 h-4 text-amber-400" />
-            <span className="font-serif tracking-wider font-bold text-zinc-300">AURA SECRÈTE</span>
-            <span>— Exclusive Sealed-Bid Rare Perfume Auction</span>
-          </div>
-          <div className="font-mono text-[11px] text-zinc-400">
-            Mata Kuliah Pemrograman Web & Keamanan Siber
-          </div>
-        </div>
-      </footer>
+      <div className="space-y-20 lg:space-y-28 py-20 lg:py-28">
+        <HowItWorks />
+        <SecuritySection />
+        <ClosingCta />
+      </div>
+      <LandingFooter />
     </div>
   );
 }
