@@ -1,49 +1,84 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthContext";
 import {
-  Shield,
-  Lock,
-  User,
-  LogOut,
-  Sparkles,
-  KeyRound,
   AlertTriangle,
-  HelpCircle,
-  Menu,
-  X,
   Crown,
+  Ellipsis,
+  House,
+  HelpCircle,
+  KeyRound,
+  ListChecks,
+  LogOut,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  Store,
+  User,
+  X,
 } from "lucide-react";
 import { CryptoExplainerModal } from "./CryptoExplainerModal";
 
-// Gaya bersama untuk semua item menu desktop supaya ukuran & weight seragam.
-// - whitespace-nowrap + shrink-0 : teks tidak pecah jadi dua baris
-// - text-sm (2xl: text-base)     : muat saat login sebagai admin
-// - focus-visible                : indikator fokus keyboard (aksesibilitas)
-const navItem =
-  "flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm 2xl:text-base font-bold text-[#231B16] transition-colors hover:text-[#9E472A] cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9E472A]";
+// ---------------------------------------------------------------------------
+// Pengaturan brand — ubah di sini jika nama / logo berganti
+// ---------------------------------------------------------------------------
+const BRAND_NAME = "Riggisa Parfume Secrète";
+const LOGO_SRC = "/logo/icon.png"; // file: public/logo/icon.png
 
-// Gaya fokus untuk tombol bulat (ikon)
+// ---------------------------------------------------------------------------
+// Gaya bersama (efek kaca ala Apple: tembus pandang + blur + highlight tipis)
+// ---------------------------------------------------------------------------
+const glass =
+  "border border-white/60 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_10px_40px_-14px_rgba(35,27,22,0.28),inset_0_1px_0_rgba(255,255,255,0.8)]";
+
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9E472A]";
 
+// Item menu desktop: kapsul halus yang menyala saat hover / aktif
+const desktopItem =
+  `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 xl:px-3.5 py-2 text-sm font-semibold transition-colors duration-200 motion-reduce:transition-none cursor-pointer ${focusRing}`;
+const desktopIdle = "text-[#231B16]/80 hover:bg-black/5 hover:text-[#231B16]";
+const desktopActive = "bg-black/5 text-[#231B16]";
+
+// Baris pada panel "Lainnya" (target sentuh minimal 44px)
+const sheetRow =
+  `flex min-h-11 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-[#231B16] transition-colors duration-200 motion-reduce:transition-none hover:bg-black/5 active:bg-black/10 ${focusRing}`;
+
+const DOCK_ITEMS = [
+  { href: "/", label: "Beranda", icon: House },
+  { href: "/#katalog", label: "Katalog", icon: Store },
+  { href: "/#cara-kerja", label: "Cara Kerja", icon: ListChecks },
+  { href: "/#keamanan", label: "Keamanan", icon: ShieldCheck },
+];
+
 export function Navbar() {
   const { user, logout, login } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Tutup panel "Lainnya" dengan tombol Escape
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [moreOpen]);
 
   const handleQuickLogin = async (identifier: string) => {
     setDemoLoading(true);
@@ -53,277 +88,355 @@ export function Navbar() {
     setShowDemoModal(false);
   };
 
+  const closeMore = () => setMoreOpen(false);
+  const isHome = pathname === "/";
+
+  const brand = (
+    <>
+      <Image
+        src={LOGO_SRC}
+        alt=""
+        width={40}
+        height={40}
+        className="h-9 w-9 shrink-0 rounded-xl transition-transform duration-300 motion-reduce:transition-none group-hover:scale-105"
+      />
+      <span className="whitespace-nowrap font-serif text-[13px] font-semibold uppercase tracking-[0.14em] text-[#231B16]">
+        {BRAND_NAME}
+      </span>
+    </>
+  );
+
   return (
     <>
-      <header
-        className={`sticky top-0 z-40 w-full transition-all duration-300 ${
-          scrolled
-            ? "bg-[#F8F4EE]/95 backdrop-blur-md shadow-sm border-b border-[#DED1BF]"
-            : "bg-[#F8F4EE]/80 backdrop-blur-sm border-b border-[#DED1BF]/50"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4 h-16 sm:h-20">
-            {/* GRUP 1: Logo */}
-            <Link href="/" className="flex shrink-0 items-center gap-2.5 group">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[#9E472A]/40 bg-white/60 backdrop-blur-sm flex items-center justify-center text-[#9E472A] font-serif font-bold text-xs sm:text-sm shadow-sm group-hover:scale-105 transition-transform">
-                AS
-              </div>
-              <div className="flex flex-col">
-                <span className="whitespace-nowrap font-serif tracking-[0.2em] uppercase text-base sm:text-lg font-semibold text-[#231B16]">
-                  Aura Secrète
-                </span>
-                {/* Tagline disembunyikan di 1280-1535px agar menu tidak sesak */}
-                <span className="hidden sm:flex xl:hidden 2xl:flex whitespace-nowrap text-[9px] sm:text-[10px] tracking-wider uppercase text-[#6B5D50] font-mono items-center gap-1 -mt-0.5">
-                  <Lock className="w-2.5 h-2.5 text-[#9E472A]" aria-hidden="true" /> Sealed-Bid Luxury Fragrances
-                </span>
-              </div>
-            </Link>
+      {/* =====================================================================
+          DESKTOP (>= 1024px): bilah kaca mengambang berbentuk pil
+          ===================================================================== */}
+      <header className="sticky top-3 z-40 mt-3 hidden px-4 lg:block">
+        <div
+          className={`mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 rounded-full px-3 transition-all duration-300 motion-reduce:transition-none xl:px-4 ${glass} ${
+            scrolled ? "bg-white/80" : "bg-white/70"
+          }`}
+        >
+          {/* Kiri: brand (teks nama hanya dari 1280px agar menu tidak sesak) */}
+          <Link
+            href="/"
+            aria-label={`${BRAND_NAME} — beranda`}
+            className={`group flex shrink-0 items-center gap-2.5 rounded-full ${focusRing}`}
+          >
+            <Image
+              src={LOGO_SRC}
+              alt=""
+              width={40}
+              height={40}
+              className="h-9 w-9 shrink-0 rounded-xl transition-transform duration-300 motion-reduce:transition-none group-hover:scale-105"
+            />
+            <span className="hidden whitespace-nowrap font-serif text-[13px] font-semibold uppercase tracking-[0.14em] text-[#231B16] xl:block">
+              {BRAND_NAME}
+            </span>
+          </Link>
 
-            {/* GRUP 2: Menu tengah (desktop mulai 1280px) */}
-            <nav
-              aria-label="Navigasi utama"
-              className="hidden xl:flex min-w-0 flex-1 items-center justify-center gap-5 2xl:gap-8"
-            >
-              <Link href="/" className={navItem}>
-                Beranda
-              </Link>
-              <Link href="/#katalog" className={navItem}>
-                Katalog
-              </Link>
-              <Link href="/#cara-kerja" className={navItem}>
-                Cara Kerja
-              </Link>
-              <Link href="/#keamanan" className={navItem}>
-                Keamanan
-              </Link>
-              <button type="button" onClick={() => setShowCryptoModal(true)} className={navItem}>
-                <HelpCircle className="h-4 w-4 text-[#9E472A]" aria-hidden="true" />
-                <span>Kripto ✦</span>
-              </button>
-
-              {user && (
-                <Link href="/my-bids" className={`${navItem} !text-[#9E472A]`}>
-                  <Shield className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>Bid Saya</span>
-                </Link>
-              )}
-
-              {user?.role === "admin" && (
-                <Link
-                  href="/admin"
-                  className={`shrink-0 whitespace-nowrap text-[11px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full bg-[#9E472A]/10 border border-[#9E472A]/30 text-[#9E472A] hover:bg-[#9E472A]/20 transition-all ${focusRing}`}
-                >
-                  Admin Vault
-                </Link>
-              )}
-            </nav>
-
-            {/* GRUP 3: Aksi kanan (desktop mulai 1280px) */}
-            <div className="hidden xl:flex shrink-0 items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowDemoModal(true)}
-                className={navItem}
-                title="Pilih akun simulasi untuk demo"
-                aria-label="Akun Demo"
-              >
-                <KeyRound className="h-4 w-4 text-[#9E472A]" aria-hidden="true" />
-                {/* Saat login, teks hanya tampil di layar sangat lebar */}
-                <span className={user ? "hidden 2xl:inline" : ""}>Akun Demo</span>
-              </button>
-
-              {user ? (
-                <div className="flex items-center gap-3">
-                  {user.isFlagged && (
-                    <div className="px-2.5 py-1 rounded-full bg-rose-100 border border-rose-300 text-rose-800 text-xs flex items-center gap-1 font-mono animate-pulse">
-                      <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>SUSPENDED</span>
-                    </div>
-                  )}
-
-                  <Link
-                    href="/profile"
-                    aria-label={`Profil ${user.username} (${user.role})`}
-                    className={`flex items-center gap-2 px-2 2xl:px-3 py-1.5 rounded-full bg-white/70 border border-[#DED1BF] hover:border-[#9E472A] transition-all ${focusRing}`}
-                  >
-                    <div className="w-6 h-6 rounded-full bg-[#9E472A]/15 border border-[#9E472A]/30 flex items-center justify-center text-[#9E472A] text-xs font-bold">
-                      {user.username.charAt(0).toUpperCase()}
-                    </div>
-                    {/* Nama & role hanya di layar sangat lebar */}
-                    <div className="hidden 2xl:flex flex-col text-left">
-                      <span className="text-xs font-semibold text-[#231B16] leading-tight">
-                        {user.username}
-                      </span>
-                      <span className="text-[9px] text-[#6B5D50] capitalize font-mono leading-tight">
-                        {user.role}
-                      </span>
-                    </div>
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => logout()}
-                    aria-label="Keluar"
-                    title="Keluar"
-                    className={`p-2 rounded-full border border-[#DED1BF] bg-white/70 text-[#6B5D50] hover:text-rose-700 hover:border-rose-300 transition-all cursor-pointer ${focusRing}`}
-                  >
-                    <LogOut className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <Link href="/login" className={navItem}>
-                    Masuk
-                  </Link>
-
-                  <Link
-                    href="/register"
-                    className={`whitespace-nowrap rounded-full bg-[#9E472A] px-5 py-2 text-sm 2xl:text-base font-bold text-white transition-colors hover:bg-[#843A21] ${focusRing}`}
-                  >
-                    Daftar
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Actions (di bawah 1280px) */}
-            <div className="flex xl:hidden items-center gap-2">
-              {/* ⬇️ Tombol kunci versi mobile: tombol ikon saja → wajib aria-label */}
-              <button
-                type="button"
-                onClick={() => setShowDemoModal(true)}
-                aria-label="Akun Demo"
-                title="Akun Demo"
-                className={`text-xs p-2 rounded-full bg-white/70 border border-[#DED1BF] text-[#9E472A] ${focusRing}`}
-              >
-                <KeyRound className="w-4 h-4" aria-hidden="true" />
-              </button>
-              {/* ⬇️ Tombol hamburger: tombol ikon saja → wajib aria-label */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile-menu"
-                className={`p-2 rounded-full bg-white/70 border border-[#DED1BF] text-[#231B16] ${focusRing}`}
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-5 h-5" aria-hidden="true" />
-                ) : (
-                  <Menu className="w-5 h-5" aria-hidden="true" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Dropdown Menu */}
-        {mobileMenuOpen && (
-          <div
-            id="mobile-menu"
-            className="xl:hidden border-b border-[#DED1BF] bg-[#F8F4EE]/95 backdrop-blur-md px-6 pt-3 pb-6 space-y-3"
+          {/* Tengah: menu utama */}
+          <nav
+            aria-label="Navigasi utama"
+            className="flex min-w-0 flex-1 items-center justify-center gap-0.5 xl:gap-1"
           >
             <Link
               href="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm py-2 text-[#9E472A] font-semibold"
+              aria-current={isHome ? "page" : undefined}
+              className={`${desktopItem} ${isHome ? desktopActive : desktopIdle}`}
             >
               Beranda
             </Link>
-            <Link
-              href="/#katalog"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm py-2 text-[#231B16] hover:text-[#9E472A] font-semibold"
-            >
-              Katalog Lelang
+            <Link href="/#katalog" className={`${desktopItem} ${desktopIdle}`}>
+              Katalog
             </Link>
-            <Link
-              href="/#cara-kerja"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm py-2 text-[#231B16] hover:text-[#9E472A] font-semibold"
-            >
+            <Link href="/#cara-kerja" className={`${desktopItem} ${desktopIdle}`}>
               Cara Kerja
             </Link>
-            <Link
-              href="/#keamanan"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm py-2 text-[#231B16] hover:text-[#9E472A] font-semibold"
-            >
+            <Link href="/#keamanan" className={`${desktopItem} ${desktopIdle}`}>
               Keamanan
             </Link>
             <button
               type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setShowCryptoModal(true);
-              }}
-              className="w-full text-left text-sm py-2 text-[#231B16] hover:text-[#9E472A] flex items-center gap-2 font-semibold"
+              onClick={() => setShowCryptoModal(true)}
+              className={`${desktopItem} ${desktopIdle}`}
             >
-              <HelpCircle className="w-4 h-4 text-[#9E472A]" aria-hidden="true" />
-              Protokol Commit-Reveal
+              <HelpCircle className="h-4 w-4 text-[#9E472A]" aria-hidden="true" />
+              <span>Kripto ✦</span>
             </button>
+
             {user && (
               <Link
                 href="/my-bids"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm py-2 text-[#9E472A] font-semibold"
+                aria-current={pathname === "/my-bids" ? "page" : undefined}
+                className={`${desktopItem} ${
+                  pathname === "/my-bids" ? desktopActive : desktopIdle
+                } !text-[#9E472A]`}
               >
-                Penawaran Saya
-              </Link>
-            )}
-            {user?.role === "admin" && (
-              <Link
-                href="/admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-1.5 text-sm py-2 text-[#9E472A] font-semibold"
-              >
-                <Crown className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Admin Vault</span>
+                <Shield className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Bid Saya</span>
               </Link>
             )}
 
-            <div className="pt-3 border-t border-[#DED1BF]">
-              {user ? (
-                <div className="flex items-center justify-between">
-                  <Link
-                    href="/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 text-sm text-[#231B16] font-semibold"
+            {user?.role === "admin" && (
+              <Link
+                href="/admin"
+                aria-current={pathname === "/admin" ? "page" : undefined}
+                className={`ml-1 shrink-0 whitespace-nowrap rounded-full border border-[#9E472A]/30 bg-[#9E472A]/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9E472A] transition-colors duration-200 motion-reduce:transition-none hover:bg-[#9E472A]/20 ${focusRing}`}
+              >
+                Admin Vault
+              </Link>
+            )}
+          </nav>
+
+          {/* Kanan: aksi akun */}
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowDemoModal(true)}
+              aria-label="Akun Demo"
+              title="Pilih akun simulasi untuk demo"
+              className={`${desktopItem} ${desktopIdle}`}
+            >
+              <KeyRound className="h-4 w-4 text-[#9E472A]" aria-hidden="true" />
+              <span className={user ? "hidden 2xl:inline" : "hidden xl:inline"}>Akun Demo</span>
+            </button>
+
+            {user ? (
+              <div className="flex items-center gap-2">
+                {user.isFlagged && (
+                  <div className="flex animate-pulse items-center gap-1 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-1 font-mono text-xs text-rose-800 motion-reduce:animate-none">
+                    <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>SUSPENDED</span>
+                  </div>
+                )}
+
+                <Link
+                  href="/profile"
+                  aria-label={`Profil ${user.username} (${user.role})`}
+                  className={`flex items-center gap-2 rounded-full border border-black/10 bg-white/60 py-1 pl-1 pr-1 transition-colors duration-200 motion-reduce:transition-none hover:border-[#9E472A] 2xl:pr-3 ${focusRing}`}
+                >
+                  <div
+                    className="grid h-8 w-8 place-items-center rounded-full border border-[#9E472A]/30 bg-[#9E472A]/15 text-xs font-bold text-[#9E472A]"
+                    aria-hidden="true"
                   >
-                    <User className="w-4 h-4 text-[#9E472A]" aria-hidden="true" />
-                    <span>Profil ({user.username})</span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => logout()}
-                    className="text-xs text-rose-700 flex items-center gap-1 font-semibold"
-                  >
-                    <LogOut className="w-3.5 h-3.5" aria-hidden="true" /> Keluar
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-center text-xs py-2.5 rounded-full bg-white border border-[#DED1BF] text-[#231B16] font-semibold"
-                  >
-                    Masuk
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-center text-xs py-2.5 rounded-full bg-[#9E472A] text-white font-semibold"
-                  >
-                    Daftar
-                  </Link>
-                </div>
-              )}
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="hidden flex-col text-left leading-tight 2xl:flex">
+                    <span className="text-xs font-semibold text-[#231B16]">{user.username}</span>
+                    <span className="font-mono text-[10px] capitalize text-[#6B5D50]">
+                      {user.role}
+                    </span>
+                  </div>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  aria-label="Keluar"
+                  title="Keluar"
+                  className={`grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-black/10 bg-white/60 text-[#6B5D50] transition-colors duration-200 motion-reduce:transition-none hover:border-rose-300 hover:text-rose-700 ${focusRing}`}
+                >
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Link href="/login" className={`${desktopItem} ${desktopIdle}`}>
+                  Masuk
+                </Link>
+                <Link
+                  href="/register"
+                  className={`whitespace-nowrap rounded-full bg-[#9E472A] px-5 py-2 text-sm font-bold text-white shadow-sm transition-all duration-200 motion-reduce:transition-none hover:bg-[#843A21] hover:shadow-md active:scale-95 ${focusRing}`}
+                >
+                  Daftar
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* =====================================================================
+          MOBILE / ANDROID (< 1024px)
+          1) strip brand di atas (tanpa navigasi, ikut tergulung)
+          2) dock navigasi kaca di bawah layar
+          3) panel "Lainnya" yang naik dari dock
+          ===================================================================== */}
+      <div className="flex items-center px-4 py-3 lg:hidden">
+        <Link
+          href="/"
+          aria-label={`${BRAND_NAME} — beranda`}
+          className={`group flex items-center gap-2.5 rounded-xl ${focusRing}`}
+        >
+          {brand}
+        </Link>
+      </div>
+
+      {/* Latar redup saat panel terbuka */}
+      {moreOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/25 backdrop-blur-[2px] lg:hidden"
+          onClick={closeMore}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Panel "Lainnya" */}
+      <div
+        id="mobile-more-panel"
+        role="dialog"
+        aria-label="Menu lainnya"
+        aria-hidden={!moreOpen}
+        inert={!moreOpen}
+        className={`fixed inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40 max-h-[70vh] overflow-y-auto rounded-3xl bg-white/85 p-2 transition-all duration-300 motion-reduce:transition-none lg:hidden ${glass} ${
+          moreOpen
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-6 opacity-0"
+        }`}
+      >
+        {user && (
+          <div className="flex items-center gap-3 px-3 pb-2 pt-2">
+            <div
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#9E472A]/30 bg-[#9E472A]/15 text-sm font-bold text-[#9E472A]"
+              aria-hidden="true"
+            >
+              {user.username.charAt(0).toUpperCase()}
             </div>
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-sm font-semibold text-[#231B16]">{user.username}</p>
+              <p className="truncate font-mono text-[11px] capitalize text-[#6B5D50]">{user.role}</p>
+            </div>
+            {user.isFlagged && (
+              <span className="flex items-center gap-1 rounded-full border border-rose-300 bg-rose-100 px-2 py-0.5 font-mono text-[11px] text-rose-800">
+                <AlertTriangle className="h-3 w-3" aria-hidden="true" /> SUSPENDED
+              </span>
+            )}
           </div>
         )}
-      </header>
+
+        {user && (
+          <Link
+            href="/my-bids"
+            onClick={closeMore}
+            className={`${sheetRow} !text-[#9E472A]`}
+          >
+            <Shield className="h-[18px] w-[18px]" aria-hidden="true" />
+            Bid Saya
+          </Link>
+        )}
+        {user?.role === "admin" && (
+          <Link href="/admin" onClick={closeMore} className={`${sheetRow} !text-[#9E472A]`}>
+            <Crown className="h-[18px] w-[18px]" aria-hidden="true" />
+            Admin Vault
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            closeMore();
+            setShowCryptoModal(true);
+          }}
+          className={sheetRow}
+        >
+          <HelpCircle className="h-[18px] w-[18px] text-[#9E472A]" aria-hidden="true" />
+          Protokol Commit-Reveal
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            closeMore();
+            setShowDemoModal(true);
+          }}
+          className={sheetRow}
+        >
+          <KeyRound className="h-[18px] w-[18px] text-[#9E472A]" aria-hidden="true" />
+          Akun Demo
+        </button>
+
+        <div className="mt-1 border-t border-black/10 pt-2">
+          {user ? (
+            <>
+              <Link href="/profile" onClick={closeMore} className={sheetRow}>
+                <User className="h-[18px] w-[18px] text-[#9E472A]" aria-hidden="true" />
+                Profil Saya
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMore();
+                  void logout();
+                }}
+                className={`${sheetRow} !text-rose-700`}
+              >
+                <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
+                Keluar
+              </button>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 p-1">
+              <Link
+                href="/login"
+                onClick={closeMore}
+                className={`grid min-h-11 place-items-center rounded-full border border-black/10 bg-white text-sm font-semibold text-[#231B16] ${focusRing}`}
+              >
+                Masuk
+              </Link>
+              <Link
+                href="/register"
+                onClick={closeMore}
+                className={`grid min-h-11 place-items-center rounded-full bg-[#9E472A] text-sm font-bold text-white ${focusRing}`}
+              >
+                Daftar
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Dock navigasi bawah */}
+      <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+        <nav
+          aria-label="Navigasi utama (seluler)"
+          className={`mx-auto grid max-w-md grid-cols-5 rounded-3xl bg-white/80 p-1.5 ${glass}`}
+        >
+          {DOCK_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = item.href === "/" && isHome && !moreOpen;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={closeMore}
+                aria-current={active ? "page" : undefined}
+                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] font-semibold transition-all duration-200 motion-reduce:transition-none active:scale-95 ${focusRing} ${
+                  active ? "bg-[#9E472A]/12 text-[#9E472A]" : "text-[#231B16]/75"
+                }`}
+              >
+                <Icon className="h-5 w-5" aria-hidden="true" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+            aria-controls="mobile-more-panel"
+            className={`flex min-h-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] font-semibold transition-all duration-200 motion-reduce:transition-none active:scale-95 ${focusRing} ${
+              moreOpen ? "bg-[#9E472A]/12 text-[#9E472A]" : "text-[#231B16]/75"
+            }`}
+          >
+            {moreOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Ellipsis className="h-5 w-5" aria-hidden="true" />
+            )}
+            <span>Lainnya</span>
+          </button>
+        </nav>
+      </div>
 
       {/* Quick Demo Accounts Modal */}
       {showDemoModal && (

@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aura Secrète — Lelang Parfum Langka Penawaran Tertutup (Commit-Reveal)",
+  title: "Riggisa parfume Secrète — Lelang Parfum Langka Penawaran Tertutup (Commit-Reveal)",
   description:
     "Platform lelang parfum ultra-rare & vintage dengan skema komitmen kriptografi SHA-256 Commit-Reveal dan enkripsi data profil AES-256-GCM.",
 };
