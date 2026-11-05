@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { createAuctionSchema, fieldErrors, firstErrorMessage } from "@/schema";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { syncAuctionStages } from "@/lib/auction-sync";
 import { recordAuditLog } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   try {
-    syncAuctionStages();
+    await syncAuctionStages();
 
     const { searchParams } = new URL(req.url);
     const search = (searchParams.get("search") || "").trim();
@@ -14,69 +15,112 @@ export async function GET(req: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "newest";
 
     const currentUser = await getCurrentUser();
-    const db = getDb();
 
-    let query = `
-      SELECT a.*, 
-        (SELECT COUNT(*) FROM bids b WHERE b.auction_id = a.id) as bidder_count,
-        (SELECT COUNT(*) FROM bids b WHERE b.auction_id = a.id AND b.status = 'REVEALED') as revealed_bidder_count,
-        u.username as winner_username
-      FROM auctions a
-      LEFT JOIN users u ON a.winner_id = u.id
-      WHERE 1=1
-    `;
-    const params: (string | number)[] = [];
+    const validStages = ["COMMIT", "REVEAL", "COMPLETED"];
 
-    if (stage && stage !== "ALL") {
-      query += " AND a.current_stage = ?";
-      params.push(stage);
+    if (stage !== "ALL" && !validStages.includes(stage)) {
+      return NextResponse.json(
+        { error: "Filter tahap lelang tidak valid." },
+        { status: 400 }
+      );
     }
 
-    if (search) {
-      query += " AND (a.title LIKE ? OR a.perfume_house LIKE ? OR a.description LIKE ?)";
-      const pattern = `%${search}%`;
-      params.push(pattern, pattern, pattern);
-    }
+    const orderBy =
+      sortBy === "price_asc"
+        ? { startingPrice: "asc" as const }
+        : sortBy === "price_desc"
+          ? { startingPrice: "desc" as const }
+          : sortBy === "ending_soon"
+            ? { commitEndTime: "asc" as const }
+            : { id: "desc" as const };
 
-    if (sortBy === "price_asc") {
-      query += " ORDER BY a.starting_price ASC";
-    } else if (sortBy === "price_desc") {
-      query += " ORDER BY a.starting_price DESC";
-    } else if (sortBy === "ending_soon") {
-      query += " ORDER BY a.commit_end_time ASC";
-    } else {
-      query += " ORDER BY a.id DESC";
-    }
+    const auctions = await prisma.auction.findMany({
+      where: {
+        ...(stage !== "ALL"
+          ? { currentStage: stage as "COMMIT" | "REVEAL" | "COMPLETED" }
+          : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: "insensitive" } },
+                { perfumeHouse: { contains: search, mode: "insensitive" } },
+                { description: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      include: {
+        winner: {
+          select: { username: true },
+        },
+        _count: {
+          select: { bids: true },
+        },
+        bids: {
+          select: {
+            status: true,
+          },
+        },
+      },
+      orderBy,
+    });
 
-    const auctions = db.prepare(query).all(...params) as Array<Record<string, unknown>>;
+    const userBids = currentUser
+      ? await prisma.bid.findMany({
+          where: { userId: currentUser.id },
+          select: {
+            auctionId: true,
+            commitmentHash: true,
+            status: true,
+            revealedAmount: true,
+          },
+        })
+      : [];
 
-    // If user is logged in, fetch their personal bids for these auctions
-    const userBidsMap = new Map<number, { commitment_hash: string; status: string; revealed_amount: number | null }>();
-    if (currentUser) {
-      const myBids = db
-        .prepare(`SELECT auction_id, commitment_hash, status, revealed_amount FROM bids WHERE user_id = ?`)
-        .all(currentUser.id) as Array<{
-          auction_id: number;
-          commitment_hash: string;
-          status: string;
-          revealed_amount: number | null;
-        }>;
+    const userBidsMap = new Map(
+      userBids.map((bid) => [bid.auctionId, bid])
+    );
 
-      for (const b of myBids) {
-        userBidsMap.set(b.auction_id, b);
-      }
-    }
+    const enrichedAuctions = auctions.map((auction) => {
+      const myBid = userBidsMap.get(auction.id);
 
-    const enrichedAuctions = auctions.map((auc) => {
-      const myBid = userBidsMap.get(auc.id as number);
       return {
-        ...auc,
+        id: auction.id,
+        title: auction.title,
+        perfume_house: auction.perfumeHouse,
+        bottle_year: auction.bottleYear,
+        concentration: auction.concentration,
+        volume_ml: auction.volumeMl,
+        description: auction.description,
+        top_notes: auction.topNotes,
+        heart_notes: auction.heartNotes,
+        base_notes: auction.baseNotes,
+        image_url: auction.imageUrl,
+        starting_price: Number(auction.startingPrice),
+        current_stage: auction.currentStage,
+        commit_end_time: auction.commitEndTime,
+        reveal_end_time: auction.revealEndTime,
+        winner_id: auction.winnerId,
+        winning_bid_amount:
+          auction.winningBidAmount !== null
+            ? Number(auction.winningBidAmount)
+            : null,
+        winning_bid_hash: auction.winningBidHash,
+        created_at: auction.createdAt,
+        winner_username: auction.winner?.username ?? null,
+        bidder_count: auction._count.bids,
+        revealed_bidder_count: auction.bids.filter(
+          (bid) => bid.status === "REVEALED"
+        ).length,
         myBid: myBid
           ? {
               hasCommitted: true,
-              commitmentHash: myBid.commitment_hash,
+              commitmentHash: myBid.commitmentHash,
               status: myBid.status,
-              revealedAmount: myBid.revealed_amount,
+              revealedAmount:
+                myBid.revealedAmount !== null
+                  ? Number(myBid.revealedAmount)
+                  : null,
             }
           : {
               hasCommitted: false,
@@ -90,18 +134,50 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ auctions: enrichedAuctions });
   } catch (error) {
     console.error("GET auctions error:", error);
-    return NextResponse.json({ error: "Failed to fetch auctions." }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Failed to fetch auctions." },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
+
     if (!currentUser || currentUser.role !== "admin") {
-      return NextResponse.json({ error: "Akses ditolak. Memerlukan hak akses Admin." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Akses ditolak. Memerlukan hak akses Admin." },
+        { status: 403 }
+      );
     }
 
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Format JSON tidak valid.",
+          fieldErrors: { form: "Format JSON tidak valid." },
+        },
+        { status: 400 }
+      );
+    }
+
+    const parsed = createAuctionSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: firstErrorMessage(parsed.error),
+          fieldErrors: fieldErrors(parsed.error),
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       title,
       perfumeHouse,
@@ -116,54 +192,45 @@ export async function POST(req: NextRequest) {
       startingPrice,
       commitDurationHours,
       revealDurationHours,
-    } = body;
-
-    if (!title || !perfumeHouse || !startingPrice) {
-      return NextResponse.json({ error: "Judul, rumah parfum, dan starting price wajib diisi." }, { status: 400 });
-    }
+    } = parsed.data;
 
     const now = Date.now();
-    const commitMs = (Number(commitDurationHours) || 2) * 60 * 60 * 1000;
-    const revealMs = (Number(revealDurationHours) || 2) * 60 * 60 * 1000;
-
-    const commitEndTime = new Date(now + commitMs).toISOString();
-    const revealEndTime = new Date(now + commitMs + revealMs).toISOString();
-
-    const db = getDb();
-    const stmt = db.prepare(`
-      INSERT INTO auctions (
-        title, perfume_house, bottle_year, concentration, volume_ml,
-        description, top_notes, heart_notes, base_notes, image_url,
-        starting_price, current_stage, commit_end_time, reveal_end_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMMIT', ?, ?)
-    `);
-
-    const result = stmt.run(
-      title.trim(),
-      perfumeHouse.trim(),
-      (bottleYear || "Limited Edition").trim(),
-      (concentration || "Extrait de Parfum").trim(),
-      Number(volumeMl) || 50,
-      description.trim(),
-      (topNotes || "Bergamot, Citrus").trim(),
-      (heartNotes || "Floral, Jasmin").trim(),
-      (baseNotes || "Sandalwood, Amber").trim(),
-      imageUrl?.trim() || "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=80",
-      Number(startingPrice),
-      commitEndTime,
-      revealEndTime
+    const commitEndTime = new Date(
+      now + commitDurationHours * 60 * 60 * 1000
+    );
+    const revealEndTime = new Date(
+      now + (commitDurationHours + revealDurationHours) * 60 * 60 * 1000
     );
 
-    const newAuctionId = Number(result.lastInsertRowid);
+    const newAuction = await prisma.auction.create({
+      data: {
+        title,
+        perfumeHouse,
+        bottleYear,
+        concentration,
+        volumeMl,
+        description,
+        topNotes,
+        heartNotes,
+        baseNotes,
+        imageUrl:
+          imageUrl ??
+          "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=80",
+        startingPrice: BigInt(startingPrice),
+        currentStage: "COMMIT",
+        commitEndTime,
+        revealEndTime,
+      },
+    });
 
-    recordAuditLog({
+    await recordAuditLog({
       userId: currentUser.id,
       userEmail: currentUser.email,
       action: "AUCTION_CREATE",
       severity: "INFO",
       details: {
-        auctionId: newAuctionId,
-        title,
+        auctionId: newAuction.id,
+        title: newAuction.title,
         startingPrice,
         commitEndTime,
         revealEndTime,
@@ -172,12 +239,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      auctionId: newAuctionId,
+      auctionId: newAuction.id,
       message: "Lelang parfum langka berhasil ditambahkan.",
     });
   } catch (error) {
     console.error("POST auction error:", error);
-    return NextResponse.json({ error: "Gagal menambahkan lelang." }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Gagal menambahkan lelang." },
+      { status: 500 }
+    );
   }
 }
-

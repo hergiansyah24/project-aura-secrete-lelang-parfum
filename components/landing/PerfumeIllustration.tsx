@@ -47,7 +47,7 @@ export function PerfumeIllustration({ className }: PerfumeIllustrationProps) {
         fill="#2b241d"
         style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontWeight: 700 }}
       >
-        AURA
+        Riggisa parfume secrete
       </text>
       <text
         x="200"

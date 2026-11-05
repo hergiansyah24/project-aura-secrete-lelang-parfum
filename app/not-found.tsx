@@ -5,6 +5,9 @@ export default function NotFound() {
     <main className="flex min-h-[60vh] items-center justify-center px-6">
       <div className="max-w-md text-center">
         <h1 className="mb-3 text-3xl font-semibold">
+          404 not found
+        </h1>
+        <h1 className="mb-3 text-3xl font-semibold">
           Halaman Tidak Ditemukan
         </h1>
         <p className="mb-6 text-sm text-zinc-400">

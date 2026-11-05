@@ -129,7 +129,7 @@ Aplikasi menambahkan tiga berkas khusus, yaitu `loading.tsx`, `error.tsx`, dan `
 **Bukti pengujian error**
 
 ![Bukti pengujian error](<uji eror.png>)
-**Bukti pengujian not-found**
+**Bukti pengujian not-found**   
 
 ![Bukti pengujian not-found](<pengujian not found.png>)
 **Status pengujian:** screenshot yang dicantumkan menjadi bukti visual untuk tampilan loading, error, dan not-found. Bukti tersebut tidak dengan sendirinya membuktikan bahwa semua skenario telah diuji dalam mode produksi. Pengujian produksi perlu dicatat terpisah jika memang dilakukan.

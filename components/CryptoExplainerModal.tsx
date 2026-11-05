@@ -36,7 +36,7 @@ export function CryptoExplainerModal({ onClose }: { onClose: () => void }) {
               1. Skema Commit-Reveal (Zero-Knowledge Sealed Bidding)
             </h3>
             <p className="text-xs text-zinc-300 leading-relaxed mb-4">
-              Pada lelang konvensional, admin atau hacker yang mengintip database dapat melihat penawaran peserta lain (risiko kolusi dan <em>bid sniping</em>). Di <strong>Aura Secrète</strong>, kami menerapkan protokol kriptografi klasik dua fase:
+              Pada lelang konvensional, admin atau hacker yang mengintip database dapat melihat penawaran peserta lain (risiko kolusi dan <em>bid sniping</em>). Di <strong>Riggisa parfume Secrète</strong>, kami menerapkan protokol kriptografi klasik dua fase:
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">

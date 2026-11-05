@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { verifyPassword, signSessionToken } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
 import { recordAuditLog } from "@/lib/audit";
@@ -7,19 +7,23 @@ import { recordAuditLog } from "@/lib/audit";
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req.headers);
-    // Rate Limiting: 5 attempts per 60 seconds (Anti Brute-Force)
     const rateLimit = checkRateLimit(`login:${ip}`, 5, 60);
 
     if (!rateLimit.allowed) {
-      recordAuditLog({
+      await recordAuditLog({
         action: "SECURITY_RATE_LIMIT",
         severity: "WARN",
-        details: { endpoint: "/api/auth/login", retryAfter: rateLimit.retryAfterSeconds },
+        details: {
+          endpoint: "/api/auth/login",
+          retryAfter: rateLimit.retryAfterSeconds,
+        },
         ipAddress: ip,
       });
 
       return NextResponse.json(
-        { error: `Terlalu banyak percobaan login. Coba lagi dalam ${rateLimit.retryAfterSeconds} detik.` },
+        {
+          error: `Terlalu banyak percobaan login. Coba lagi dalam ${rateLimit.retryAfterSeconds} detik.`,
+        },
         {
           status: 429,
           headers: {
@@ -33,75 +37,91 @@ export async function POST(req: NextRequest) {
     const { identifier, password } = body;
 
     if (!identifier || !password) {
-      return NextResponse.json({ error: "Username/Email dan password harus diisi." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Username/Email dan password harus diisi." },
+        { status: 400 }
+      );
     }
 
     const sanitizedIdentifier = String(identifier).trim().toLowerCase();
-    const db = getDb();
 
-    // Prepared Statement for SQL Injection prevention
-    const user = db
-      .prepare(`
-        SELECT id, username, email, password_hash, role, is_flagged, flag_reason
-        FROM users
-        WHERE username = ? OR email = ?
-      `)
-      .get(sanitizedIdentifier, sanitizedIdentifier) as
-      | {
-          id: number;
-          username: string;
-          email: string;
-          password_hash: string;
-          role: "admin" | "bidder";
-          is_flagged: number;
-          flag_reason: string | null;
-        }
-      | undefined;
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: sanitizedIdentifier },
+          { email: sanitizedIdentifier },
+        ],
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        passwordHash: true,
+        role: true,
+        isFlagged: true,
+        flagReason: true,
+      },
+    });
 
     if (!user) {
-      recordAuditLog({
+      await recordAuditLog({
         action: "AUTH_LOGIN",
         severity: "WARN",
-        details: { attempt: sanitizedIdentifier, status: "FAILED_USER_NOT_FOUND" },
+        details: {
+          attempt: sanitizedIdentifier,
+          status: "FAILED_USER_NOT_FOUND",
+        },
         ipAddress: ip,
       });
-      return NextResponse.json({ error: "Kredensial tidak valid." }, { status: 401 });
+
+      return NextResponse.json(
+        { error: "Kredensial tidak valid." },
+        { status: 401 }
+      );
     }
 
-    // Bcrypt Password Verification
-    const passwordValid = await verifyPassword(password, user.password_hash);
+    const passwordValid = await verifyPassword(
+      password,
+      user.passwordHash
+    );
+
     if (!passwordValid) {
-      recordAuditLog({
+      await recordAuditLog({
         userId: user.id,
         userEmail: user.email,
         action: "AUTH_LOGIN",
         severity: "WARN",
-        details: { attempt: sanitizedIdentifier, status: "FAILED_WRONG_PASSWORD" },
+        details: {
+          attempt: sanitizedIdentifier,
+          status: "FAILED_WRONG_PASSWORD",
+        },
         ipAddress: ip,
       });
-      return NextResponse.json({ error: "Kredensial tidak valid." }, { status: 401 });
+
+      return NextResponse.json(
+        { error: "Kredensial tidak valid." },
+        { status: 401 }
+      );
     }
 
-    // Record Successful Login in Audit Trail
-    recordAuditLog({
+    await recordAuditLog({
       userId: user.id,
       userEmail: user.email,
       action: "AUTH_LOGIN",
-      severity: user.is_flagged ? "WARN" : "INFO",
+      severity: user.isFlagged ? "WARN" : "INFO",
       details: {
         username: user.username,
         role: user.role,
-        isFlagged: Boolean(user.is_flagged),
+        isFlagged: user.isFlagged,
       },
       ipAddress: ip,
     });
 
-    // Generate JWT Session Token
     const token = await signSessionToken({
       userId: user.id,
       username: user.username,
       email: user.email,
-      role: user.role,
+      role: user.role as "admin" | "bidder",
     });
 
     const response = NextResponse.json({
@@ -111,8 +131,8 @@ export async function POST(req: NextRequest) {
         username: user.username,
         email: user.email,
         role: user.role,
-        isFlagged: Boolean(user.is_flagged),
-        flagReason: user.flag_reason,
+        isFlagged: user.isFlagged,
+        flagReason: user.flagReason,
       },
     });
 
@@ -127,7 +147,10 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json({ error: "Terjadi kesalahan internal server." }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Terjadi kesalahan internal server." },
+      { status: 500 }
+    );
   }
 }
-

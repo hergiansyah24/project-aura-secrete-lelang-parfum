@@ -1,14 +1,13 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { getDb } from "./db";
+import { prisma } from "./prisma";
+import { unstable_rethrow } from "next/navigation";
 
 const jwtSecretValue = process.env.JWT_SECRET;
 
 if (!jwtSecretValue || jwtSecretValue.length < 32) {
-  throw new Error(
-    "JWT_SECRET wajib diatur dan minimal 32 karakter."
-  );
+  throw new Error("JWT_SECRET wajib diatur dan minimal 32 karakter.");
 }
 
 const JWT_SECRET = new TextEncoder().encode(jwtSecretValue);
@@ -26,7 +25,10 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
 
@@ -43,7 +45,9 @@ export async function signSessionToken(payload: {
     .sign(JWT_SECRET);
 }
 
-export async function verifySessionToken(token: string): Promise<{
+export async function verifySessionToken(
+  token: string
+): Promise<{
   userId: number;
   username: string;
   email: string;
@@ -51,6 +55,7 @@ export async function verifySessionToken(token: string): Promise<{
 } | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
+
     return {
       userId: payload.userId as number,
       username: payload.username as string,
@@ -66,24 +71,25 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("sealed_bid_session")?.value;
+
     if (!token) return null;
 
     const verified = await verifySessionToken(token);
     if (!verified) return null;
 
-    const db = getDb();
-    const user = db
-      .prepare("SELECT id, username, email, role, is_flagged, flag_reason FROM users WHERE id = ?")
-      .get(verified.userId) as
-      | {
-          id: number;
-          username: string;
-          email: string;
-          role: string;
-          is_flagged: number;
-          flag_reason: string | null;
-        }
-      | undefined;
+    const user = await prisma.user.findUnique({
+      where: {
+        id: verified.userId,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isFlagged: true,
+        flagReason: true,
+      },
+    });
 
     if (!user) return null;
 
@@ -92,11 +98,13 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       username: user.username,
       email: user.email,
       role: user.role as "admin" | "bidder",
-      isFlagged: Boolean(user.is_flagged),
-      flagReason: user.flag_reason,
+      isFlagged: user.isFlagged,
+      flagReason: user.flagReason,
     };
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
+
+    console.error("Get current user error:", error);
     return null;
   }
 }
-

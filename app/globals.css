@@ -35,15 +35,31 @@
   --color-zinc-950: #d9d1c2;
 
   --color-amber-200: #9b7a45;
-  --color-amber-300: #7a5a29;
   --color-amber-400: #86642f;
   --color-amber-500: #8a6a38;
   --color-amber-600: #75592d;
 
-  --color-indigo-400: #4f53a3;
-  --color-emerald-400: #35765a;
-  --color-rose-300: #9a3f49;
-  --color-rose-400: #a8454f;
+  /* Teks berwarna: digelapkan agar terbaca di atas latar terang / tint di bawah */
+  --color-amber-300: #65481a;
+  --color-indigo-200: #34377f;
+  --color-indigo-300: #3a3e8a;
+  --color-indigo-400: #434793;
+  --color-emerald-300: #1f5c43;
+  --color-emerald-400: #27604a;
+  --color-rose-300: #8c2f39;
+  --color-rose-400: #8f3039;
+
+  /*
+    Latar banner / chip berwarna (bg-rose-950/70, bg-emerald-950/60, dst).
+    Sebelumnya skala -950 tetap GELAP bawaan Tailwind, sementara teks di atasnya
+    (rose-300 dll.) sudah digelapkan oleh tema -> kontras hanya 1,1:1 (tak terbaca).
+    Sekarang menjadi tint terang yang selaras dengan tema kraft.
+  */
+  --color-rose-900: #e6bcc1;
+  --color-rose-950: #f2d3d7;
+  --color-emerald-950: #cfe5d8;
+  --color-indigo-950: #d6d8f0;
+  --color-amber-950: #ecdcb8;
 }
 
 body {

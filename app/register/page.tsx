@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { registerSchema, firstErrorMessage } from "@/schema";
 import { Navbar } from "@/components/Navbar";
 import { useAuth } from "@/components/AuthContext";
 import {
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function RegisterPage() {
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
@@ -33,24 +35,35 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  e.preventDefault();
+  setError(null);
 
-    if (formData.password.length < 6) {
-      setError("Password minimal 6 karakter.");
-      return;
-    }
+  // Validasi seluruh input menggunakan schema Zod 4.
+  const validation = registerSchema.safeParse(formData);
 
-    setLoading(true);
-    const result = await register(formData);
-    setLoading(false);
+  if (!validation.success) {
+    setError(firstErrorMessage(validation.error));
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    // Gunakan data hasil validasi dan transformasi Zod.
+    const result = await register(validation.data);
 
     if (result.success) {
       router.push("/");
     } else {
       setError(result.error || "Registrasi gagal.");
     }
-  };
+  } catch {
+    setError("Terjadi kesalahan saat registrasi. Silakan coba lagi.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
@@ -125,7 +138,7 @@ export default function RegisterPage() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Minimal 6 karakter"
+                  placeholder="Minimal 8 karakter"
                   className="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl pl-10 pr-4 py-2 text-xs text-zinc-100 focus:outline-none focus:border-amber-500"
                 />
               </div>

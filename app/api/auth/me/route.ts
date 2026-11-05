@@ -1,73 +1,80 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { decryptSensitiveData } from "@/lib/crypto";
+import { unstable_rethrow } from "next/navigation";
 
 export async function GET() {
-  const sessionUser = await getCurrentUser();
-  if (!sessionUser) {
-    return NextResponse.json({ user: null });
-  }
+  try {
+    const sessionUser = await getCurrentUser();
 
-  const db = getDb();
-  const profile = db
-    .prepare(`
-      SELECT id, username, email, role, full_name_encrypted, phone_encrypted, address_encrypted,
-             is_flagged, flag_reason, created_at
-      FROM users
-      WHERE id = ?
-    `)
-    .get(sessionUser.id) as
-    | {
-        id: number;
-        username: string;
-        email: string;
-        role: "admin" | "bidder";
-        full_name_encrypted: string | null;
-        phone_encrypted: string | null;
-        address_encrypted: string | null;
-        is_flagged: number;
-        flag_reason: string | null;
-        created_at: string;
-      }
-    | undefined;
+    if (!sessionUser) {
+      return NextResponse.json({ user: null });
+    }
 
-  if (!profile) {
-    return NextResponse.json({ user: null });
-  }
+    const profile = await prisma.user.findUnique({
+      where: {
+        id: sessionUser.id,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        fullNameEncrypted: true,
+        phoneEncrypted: true,
+        addressEncrypted: true,
+        isFlagged: true,
+        flagReason: true,
+        createdAt: true,
+      },
+    });
 
-  // Decrypt AES-256-GCM ciphertext for user profile viewing
-  const decryptedFullName = profile.full_name_encrypted
-    ? decryptSensitiveData(profile.full_name_encrypted)
-    : "";
-  const decryptedPhone = profile.phone_encrypted
-    ? decryptSensitiveData(profile.phone_encrypted)
-    : "";
-  const decryptedAddress = profile.address_encrypted
-    ? decryptSensitiveData(profile.address_encrypted)
-    : "";
+    if (!profile) {
+      return NextResponse.json({ user: null });
+    }
 
-  return NextResponse.json({
-    user: {
-      id: profile.id,
-      username: profile.username,
-      email: profile.email,
-      role: profile.role,
-      isFlagged: Boolean(profile.is_flagged),
-      flagReason: profile.flag_reason,
-      createdAt: profile.created_at,
-      profile: {
-        fullName: decryptedFullName,
-        phone: decryptedPhone,
-        address: decryptedAddress,
-        // Also provide ciphertexts for crypto inspection demo!
-        rawEncrypted: {
-          fullNameCiphertext: profile.full_name_encrypted,
-          phoneCiphertext: profile.phone_encrypted,
-          addressCiphertext: profile.address_encrypted,
+    const decryptedFullName = profile.fullNameEncrypted
+      ? decryptSensitiveData(profile.fullNameEncrypted)
+      : "";
+
+    const decryptedPhone = profile.phoneEncrypted
+      ? decryptSensitiveData(profile.phoneEncrypted)
+      : "";
+
+    const decryptedAddress = profile.addressEncrypted
+      ? decryptSensitiveData(profile.addressEncrypted)
+      : "";
+
+    return NextResponse.json({
+      user: {
+        id: profile.id,
+        username: profile.username,
+        email: profile.email,
+        role: profile.role,
+        isFlagged: profile.isFlagged,
+        flagReason: profile.flagReason,
+        createdAt: profile.createdAt,
+        profile: {
+          fullName: decryptedFullName,
+          phone: decryptedPhone,
+          address: decryptedAddress,
+          rawEncrypted: {
+            fullNameCiphertext: profile.fullNameEncrypted,
+            phoneCiphertext: profile.phoneEncrypted,
+            addressCiphertext: profile.addressEncrypted,
+          },
         },
       },
-    },
-  });
-}
+    });
+  } catch (error) {
+  unstable_rethrow(error);
 
+  console.error("Get profile error:", error);
+
+  return NextResponse.json(
+    { error: "Terjadi kesalahan internal server." },
+    { status: 500 }
+  );
+}
+}

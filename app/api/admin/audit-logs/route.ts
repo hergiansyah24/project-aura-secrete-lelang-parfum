@@ -1,47 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-
+import { unstable_rethrow } from "next/navigation";
 export async function GET(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
+
     if (!currentUser || currentUser.role !== "admin") {
-      return NextResponse.json({ error: "Akses ditolak. Memerlukan hak akses Admin." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Akses ditolak. Memerlukan hak akses Admin." },
+        { status: 403 }
+      );
     }
 
     const { searchParams } = new URL(req.url);
     const severity = searchParams.get("severity");
     const action = searchParams.get("action");
-    const limit = Math.min(Number(searchParams.get("limit")) || 100, 200);
 
-    const db = getDb();
-    let query = `
-      SELECT l.*, u.username
-      FROM audit_logs l
-      LEFT JOIN users u ON l.user_id = u.id
-      WHERE 1=1
-    `;
-    const params: (string | number)[] = [];
+    const requestedLimit = Number(searchParams.get("limit")) || 100;
+    const limit = Math.min(Math.max(requestedLimit, 1), 200);
 
-    if (severity && severity !== "ALL") {
-      query += " AND l.severity = ?";
-      params.push(severity);
-    }
+    const logs = await prisma.auditLog.findMany({
+      where: {
+        ...(severity && severity !== "ALL" ? { severity } : {}),
+        ...(action && action !== "ALL" ? { action } : {}),
+      },
+      include: {
+        user: {
+          select: {
+            username: true,
+          },
+        },
+      },
+      orderBy: {
+        id: "desc",
+      },
+      take: limit,
+    });
 
-    if (action && action !== "ALL") {
-      query += " AND l.action = ?";
-      params.push(action);
-    }
+    const processedLogs = logs.map((log) => ({
+      ...log,
+      user_id: log.userId,
+      user_email: log.userEmail,
+      ip_address: log.ipAddress,
+      created_at: log.createdAt,
+      username: log.user?.username ?? null,
+    }));
 
-    query += " ORDER BY l.id DESC LIMIT ?";
-    params.push(limit);
-
-    const logs = db.prepare(query).all(...params);
-
-    return NextResponse.json({ logs });
+    return NextResponse.json({ logs: processedLogs });
   } catch (error) {
-    console.error("GET audit logs error:", error);
-    return NextResponse.json({ error: "Gagal mengambil log audit." }, { status: 500 });
-  }
-}
+  unstable_rethrow(error);
 
+  console.error("GET audit logs error:", error);
+
+  return NextResponse.json(
+    { error: "Gagal mengambil log audit." },
+    { status: 500 }
+  );
+}
+}

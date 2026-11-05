@@ -1,4 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
+
+<Image
+  src="/logo/icon.png"
+  alt=""
+  width={44}
+  height={44}
+  className="h-10 w-10 rounded-xl"
+/>
 
 export function LandingFooter() {
   return (
@@ -11,7 +20,7 @@ export function LandingFooter() {
             </div>
             <div>
               <span className="font-serif font-bold text-sm tracking-[0.16em] uppercase text-[#1E1A17]">
-                Aura Secrète
+                Riggisa parfume Secrète
               </span>
               <span className="block text-[11px] text-[#4E443B] font-normal">
                 Exclusive Perfume Auction
@@ -43,8 +52,8 @@ export function LandingFooter() {
           </div>
         </div>
         <div className="pt-6 border-t border-[#EAE1D3] text-center text-[11px] text-[#4E443B] font-normal">
-          © 2026 Aura Secrète · Proyek Mata Kuliah
-          Pemrograman Web &amp; Keamanan Siber by rizqy
+          © 2026 Riggisa parfume Secrète · Proyek Mata Kuliah
+          Pemrograman Web & Keamanan Siber by rizqy
         </div>
       </div>
     </footer>

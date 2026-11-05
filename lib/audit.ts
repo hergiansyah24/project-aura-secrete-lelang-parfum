@@ -1,4 +1,4 @@
-import { getDb } from "./db";
+import { prisma } from "./prisma";
 
 export type AuditAction =
   | "AUTH_REGISTER"
@@ -7,6 +7,7 @@ export type AuditAction =
   | "BID_COMMIT"
   | "BID_REVEAL_SUCCESS"
   | "BID_REVEAL_FRAUD"
+  | "BID_DELETE"
   | "AUCTION_CREATE"
   | "AUCTION_UPDATE"
   | "AUCTION_STAGE_CHANGE"
@@ -27,34 +28,35 @@ export interface AuditLogEntry {
   createdAt?: string;
 }
 
-export function recordAuditLog(entry: {
+export async function recordAuditLog(entry: {
   userId?: number | null;
   userEmail?: string | null;
   action: AuditAction;
   severity?: AuditSeverity;
   details: Record<string, unknown> | string;
   ipAddress?: string | null;
-}): void {
+}): Promise<void> {
   try {
-    const db = getDb();
-    const severity = entry.severity || (entry.action.includes("FRAUD") ? "CRITICAL" : "INFO");
-    const detailsStr = typeof entry.details === "string" ? entry.details : JSON.stringify(entry.details);
+    const severity =
+      entry.severity ||
+      (entry.action.includes("FRAUD") ? "CRITICAL" : "INFO");
 
-    const stmt = db.prepare(`
-      INSERT INTO audit_logs (user_id, user_email, action, severity, details, ip_address, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-    `);
+    const detailsStr =
+      typeof entry.details === "string"
+        ? entry.details
+        : JSON.stringify(entry.details);
 
-    stmt.run(
-      entry.userId ?? null,
-      entry.userEmail ?? null,
-      entry.action,
-      severity,
-      detailsStr,
-      entry.ipAddress ?? "127.0.0.1"
-    );
+    await prisma.auditLog.create({
+      data: {
+        userId: entry.userId ?? null,
+        userEmail: entry.userEmail ?? null,
+        action: entry.action,
+        severity,
+        details: detailsStr,
+        ipAddress: entry.ipAddress ?? "127.0.0.1",
+      },
+    });
   } catch (err) {
     console.error("Failed to record audit log:", err);
   }
 }
-

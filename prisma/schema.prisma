@@ -1,0 +1,104 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AuctionStage {
+  COMMIT
+  REVEAL
+  COMPLETED
+}
+
+enum BidStatus {
+  COMMITTED
+  REVEALED
+  TAMPERED_REJECTED
+}
+
+model User {
+  id                  Int        @id @default(autoincrement())
+  username            String     @unique @db.VarChar(100)
+  email               String     @unique @db.VarChar(255)
+  passwordHash        String     @map("password_hash") @db.VarChar(255)
+  role                String     @default("bidder") @db.VarChar(20)
+  fullNameEncrypted   String?    @map("full_name_encrypted") @db.Text
+  phoneEncrypted      String?    @map("phone_encrypted") @db.Text
+  addressEncrypted    String?    @map("address_encrypted") @db.Text
+  isFlagged           Boolean    @default(false) @map("is_flagged")
+  flagReason          String?    @map("flag_reason") @db.Text
+  createdAt           DateTime   @default(now()) @map("created_at")
+
+  bids                Bid[]
+  wonAuctions         Auction[]  @relation("AuctionWinner")
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model Auction {
+  id                Int          @id @default(autoincrement())
+  title             String       @db.VarChar(150)
+  perfumeHouse      String       @map("perfume_house") @db.VarChar(100)
+  bottleYear        String       @map("bottle_year") @db.VarChar(100)
+  concentration     String       @db.VarChar(100)
+  volumeMl          Int          @map("volume_ml")
+  description       String       @db.Text
+  topNotes          String       @map("top_notes") @db.VarChar(300)
+  heartNotes        String       @map("heart_notes") @db.VarChar(300)
+  baseNotes         String       @map("base_notes") @db.VarChar(300)
+  imageUrl          String       @map("image_url") @db.VarChar(500)
+  startingPrice     BigInt       @map("starting_price")
+  currentStage      AuctionStage @default(COMMIT) @map("current_stage")
+  commitEndTime     DateTime     @map("commit_end_time")
+  revealEndTime     DateTime     @map("reveal_end_time")
+  winnerId          Int?         @map("winner_id")
+  winningBidAmount  BigInt?      @map("winning_bid_amount")
+  winningBidHash    String?      @map("winning_bid_hash") @db.VarChar(64)
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  bids              Bid[]
+  winner            User?        @relation("AuctionWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+
+  @@map("auctions")
+}
+
+model Bid {
+  id              Int       @id @default(autoincrement())
+  auctionId       Int       @map("auction_id")
+  userId          Int       @map("user_id")
+  commitmentHash  String    @map("commitment_hash") @db.VarChar(64)
+  status          BidStatus @default(COMMITTED)
+  revealedAmount  BigInt?   @map("revealed_amount")
+  revealedNonce   String?   @map("revealed_nonce") @db.Text
+  committedAt     DateTime  @default(now()) @map("committed_at")
+  revealedAt      DateTime? @map("revealed_at")
+
+  auction         Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([auctionId, userId])
+  @@index([auctionId])
+  @@index([userId])
+  @@map("bids")
+}
+
+model AuditLog {
+  id          Int       @id @default(autoincrement())
+  userId      Int?      @map("user_id")
+  userEmail   String?   @map("user_email") @db.VarChar(255)
+  action      String    @db.VarChar(100)
+  severity    String    @default("INFO") @db.VarChar(20)
+  details     String    @db.Text
+  ipAddress   String?   @default("127.0.0.1") @map("ip_address") @db.VarChar(45)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}

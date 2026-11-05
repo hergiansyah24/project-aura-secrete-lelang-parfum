@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
 import { recordAuditLog } from "@/lib/audit";
@@ -7,36 +7,49 @@ import { syncAuctionStages } from "@/lib/auction-sync";
 
 export async function POST(req: NextRequest) {
   try {
-    syncAuctionStages();
+    await syncAuctionStages();
+
     const ip = getClientIp(req.headers);
 
-    // Rate Limiting: 10 commit submissions per minute (Anti-Spam)
+    // Rate Limiting: 10 commit submissions per minute.
     const rateLimit = checkRateLimit(`bid_commit:${ip}`, 10, 60);
+
     if (!rateLimit.allowed) {
-      recordAuditLog({
+      await recordAuditLog({
         action: "SECURITY_RATE_LIMIT",
         severity: "WARN",
-        details: { endpoint: "/api/bids/commit", retryAfter: rateLimit.retryAfterSeconds },
+        details: {
+          endpoint: "/api/bids/commit",
+          retryAfter: rateLimit.retryAfterSeconds,
+        },
         ipAddress: ip,
       });
 
       return NextResponse.json(
-        { error: `Spam bidding dicegah. Harap tunggu ${rateLimit.retryAfterSeconds} detik.` },
+        {
+          error: `Spam bidding dicegah. Harap tunggu ${rateLimit.retryAfterSeconds} detik.`,
+        },
         {
           status: 429,
-          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
         }
       );
     }
 
     const currentUser = await getCurrentUser();
+
     if (!currentUser) {
-      return NextResponse.json({ error: "Anda harus login untuk mengajukan penawaran." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Anda harus login untuk mengajukan penawaran." },
+        { status: 401 }
+      );
     }
 
-    // Anti-Cheat: Reject flagged / suspicious accounts
+    // Reject flagged accounts.
     if (currentUser.isFlagged) {
-      recordAuditLog({
+      await recordAuditLog({
         userId: currentUser.id,
         userEmail: currentUser.email,
         action: "USER_FLAGGED",
@@ -62,64 +75,87 @@ export async function POST(req: NextRequest) {
     const { auctionId, commitmentHash } = body;
 
     const parsedAuctionId = Number(auctionId);
-    if (!parsedAuctionId || isNaN(parsedAuctionId)) {
-      return NextResponse.json({ error: "ID lelang tidak valid." }, { status: 400 });
+
+    if (
+      !Number.isSafeInteger(parsedAuctionId) ||
+      parsedAuctionId <= 0
+    ) {
+      return NextResponse.json(
+        { error: "ID lelang tidak valid." },
+        { status: 400 }
+      );
     }
 
-    // Cryptographic validation: Hash must be a valid 64-character SHA-256 hex string
+    // Validate SHA-256 commitment hash.
     if (
       !commitmentHash ||
       typeof commitmentHash !== "string" ||
       !/^[a-fA-F0-9]{64}$/.test(commitmentHash.trim())
     ) {
       return NextResponse.json(
-        { error: "Format commitment hash tidak valid. Harus berupa 64-karakter SHA-256 hex string." },
-        { status: 400 }
-      );
-    }
-
-    const normalizedHash = commitmentHash.trim().toLowerCase();
-    const db = getDb();
-
-    // Check auction validity and stage
-    const auction = db
-      .prepare("SELECT id, title, current_stage FROM auctions WHERE id = ?")
-      .get(parsedAuctionId) as { id: number; title: string; current_stage: string } | undefined;
-
-    if (!auction) {
-      return NextResponse.json({ error: "Lelang tidak ditemukan." }, { status: 404 });
-    }
-
-    if (auction.current_stage !== "COMMIT") {
-      return NextResponse.json(
         {
-          error: `Fase pengajuan tertutup (COMMIT) sudah berakhir. Status lelang saat ini: ${auction.current_stage}`,
+          error:
+            "Format commitment hash tidak valid. Harus berupa 64-karakter SHA-256 hex string.",
         },
         { status: 400 }
       );
     }
 
-    // Prepared statement upsert
-    // Note: The raw bid amount and nonce are NEVER sent to the server in this phase!
-    const existingBid = db
-      .prepare("SELECT id FROM bids WHERE auction_id = ? AND user_id = ?")
-      .get(parsedAuctionId, currentUser.id) as { id: number } | undefined;
+    const normalizedHash = commitmentHash.trim().toLowerCase();
 
-    if (existingBid) {
-      db.prepare(`
-        UPDATE bids
-        SET commitment_hash = ?, status = 'COMMITTED', committed_at = datetime('now')
-        WHERE id = ?
-      `).run(normalizedHash, existingBid.id);
-    } else {
-      db.prepare(`
-        INSERT INTO bids (auction_id, user_id, commitment_hash, status, committed_at)
-        VALUES (?, ?, ?, 'COMMITTED', datetime('now'))
-      `).run(parsedAuctionId, currentUser.id, normalizedHash);
+    // Check auction validity and stage in PostgreSQL.
+    const auction = await prisma.auction.findUnique({
+      where: {
+        id: parsedAuctionId,
+      },
+      select: {
+        id: true,
+        title: true,
+        currentStage: true,
+      },
+    });
+
+    if (!auction) {
+      return NextResponse.json(
+        { error: "Lelang tidak ditemukan." },
+        { status: 404 }
+      );
     }
 
-    // Record in immutable audit log
-    recordAuditLog({
+    if (auction.currentStage !== "COMMIT") {
+      return NextResponse.json(
+        {
+          error: `Fase pengajuan tertutup (COMMIT) sudah berakhir. Status lelang saat ini: ${auction.currentStage}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Save or update the user's commitment.
+    // Bid amount and nonce are not sent during this phase.
+    await prisma.bid.upsert({
+      where: {
+        auctionId_userId: {
+          auctionId: parsedAuctionId,
+          userId: currentUser.id,
+        },
+      },
+      update: {
+        commitmentHash: normalizedHash,
+        status: "COMMITTED",
+        committedAt: new Date(),
+      },
+      create: {
+        auctionId: parsedAuctionId,
+        userId: currentUser.id,
+        commitmentHash: normalizedHash,
+        status: "COMMITTED",
+        committedAt: new Date(),
+      },
+    });
+
+    // Record audit log in PostgreSQL.
+    await recordAuditLog({
       userId: currentUser.id,
       userEmail: currentUser.email,
       action: "BID_COMMIT",
@@ -135,12 +171,16 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Komitmen penawaran terenkripsi SHA-256 berhasil dicatat di server.",
+      message:
+        "Komitmen penawaran terenkripsi SHA-256 berhasil dicatat di server.",
       commitmentHash: normalizedHash,
     });
   } catch (error) {
     console.error("Bid commit error:", error);
-    return NextResponse.json({ error: "Gagal memproses komitmen penawaran." }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Gagal memproses komitmen penawaran." },
+      { status: 500 }
+    );
   }
 }
-

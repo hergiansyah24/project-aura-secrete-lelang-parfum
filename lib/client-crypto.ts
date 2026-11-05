@@ -105,7 +105,7 @@ export function downloadBidProofFile(proof: BidProof): void {
     encodeURIComponent(
       JSON.stringify(
         {
-          application: "Aura Secrète — Rare Perfume Sealed-Bid Auction",
+          application: "Riggisa parfume Secrète — Rare Perfume Sealed-Bid Auction",
           cryptographicProtocol: "SHA-256 Commit-Reveal Scheme",
           receipt: {
             ...proof,

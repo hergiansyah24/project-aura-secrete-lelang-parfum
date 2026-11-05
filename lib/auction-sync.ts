@@ -1,88 +1,122 @@
-import { getDb } from "./db";
+import { prisma } from "./prisma";
 import { recordAuditLog } from "./audit";
 
 /**
  * Automatically synchronize auction stages based on timestamps:
- * 1. COMMIT -> REVEAL (when commit_end_time passed)
- * 2. REVEAL -> COMPLETED (when reveal_end_time passed, auto-select highest valid bid)
+ * 1. COMMIT -> REVEAL
+ * 2. REVEAL -> COMPLETED and determine the highest revealed bid
  */
-export function syncAuctionStages(): void {
+export async function syncAuctionStages(): Promise<void> {
   try {
-    const db = getDb();
-    const nowIso = new Date().toISOString();
+    const now = new Date();
 
     // 1. Advance COMMIT -> REVEAL
-    const commitPassedAuctions = db
-      .prepare(`
-        SELECT id, title, commit_end_time
-        FROM auctions
-        WHERE current_stage = 'COMMIT' AND ? >= commit_end_time
-      `)
-      .all(nowIso) as Array<{ id: number; title: string; commit_end_time: string }>;
+    const commitPassedAuctions = await prisma.auction.findMany({
+      where: {
+        currentStage: "COMMIT",
+        commitEndTime: { lte: now },
+      },
+      select: {
+        id: true,
+        title: true,
+      },
+    });
 
     for (const auction of commitPassedAuctions) {
-      db.prepare(`UPDATE auctions SET current_stage = 'REVEAL' WHERE id = ?`).run(auction.id);
-      recordAuditLog({
-        action: "AUCTION_STAGE_CHANGE",
-        severity: "INFO",
-        details: {
-          auctionId: auction.id,
-          title: auction.title,
-          from: "COMMIT",
-          to: "REVEAL",
-          trigger: "AUTO_TIMER_EXPIRY",
+      const updated = await prisma.auction.updateMany({
+        where: {
+          id: auction.id,
+          currentStage: "COMMIT",
+          commitEndTime: { lte: now },
         },
+        data: { currentStage: "REVEAL" },
       });
+
+      if (updated.count > 0) {
+        await recordAuditLog({
+          action: "AUCTION_STAGE_CHANGE",
+          severity: "INFO",
+          details: {
+            auctionId: auction.id,
+            title: auction.title,
+            from: "COMMIT",
+            to: "REVEAL",
+            trigger: "AUTO_TIMER_EXPIRY",
+          },
+        });
+      }
     }
 
-    // 2. Advance REVEAL -> COMPLETED & Determine Winner
-    const revealPassedAuctions = db
-      .prepare(`
-        SELECT id, title, reveal_end_time
-        FROM auctions
-        WHERE current_stage = 'REVEAL' AND ? >= reveal_end_time
-      `)
-      .all(nowIso) as Array<{ id: number; title: string; reveal_end_time: string }>;
+    // 2. Advance REVEAL -> COMPLETED and determine winner
+    const revealPassedAuctions = await prisma.auction.findMany({
+      where: {
+        currentStage: "REVEAL",
+        revealEndTime: { lte: now },
+      },
+      select: {
+        id: true,
+        title: true,
+      },
+    });
 
     for (const auction of revealPassedAuctions) {
-      // Find highest verified revealed bid
-      const highestBid = db
-        .prepare(`
-          SELECT user_id, revealed_amount, commitment_hash
-          FROM bids
-          WHERE auction_id = ? AND status = 'REVEALED'
-          ORDER BY revealed_amount DESC
-          LIMIT 1
-        `)
-        .get(auction.id) as
-        | { user_id: number; revealed_amount: number; commitment_hash: string }
-        | undefined;
+      const result = await prisma.$transaction(async (tx) => {
+        const highestBid = await tx.bid.findFirst({
+          where: {
+            auctionId: auction.id,
+            status: "REVEALED",
+            revealedAmount: { not: null },
+          },
+          orderBy: [
+            { revealedAmount: "desc" },
+            { id: "asc" },
+          ],
+          select: {
+            userId: true,
+            revealedAmount: true,
+            commitmentHash: true,
+          },
+        });
 
-      if (highestBid) {
-        db.prepare(`
-          UPDATE auctions
-          SET current_stage = 'COMPLETED',
-              winner_id = ?,
-              winning_bid_amount = ?,
-              winning_bid_hash = ?
-          WHERE id = ?
-        `).run(highestBid.user_id, highestBid.revealed_amount, highestBid.commitment_hash, auction.id);
+        const updated = await tx.auction.updateMany({
+          where: {
+            id: auction.id,
+            currentStage: "REVEAL",
+            revealEndTime: { lte: now },
+          },
+          data: {
+            currentStage: "COMPLETED",
+            winnerId: highestBid?.userId ?? null,
+            winningBidAmount: highestBid?.revealedAmount ?? null,
+            winningBidHash: highestBid?.commitmentHash ?? null,
+          },
+        });
 
-        recordAuditLog({
+        return {
+          updated: updated.count > 0,
+          highestBid,
+        };
+      });
+
+      // Another request may have finalized this auction first.
+      if (!result.updated) {
+        continue;
+      }
+
+      if (result.highestBid) {
+        await recordAuditLog({
           action: "AUCTION_FINALIZE",
           severity: "INFO",
           details: {
             auctionId: auction.id,
-            winnerId: highestBid.user_id,
-            winningAmount: highestBid.revealed_amount,
-            winningHash: highestBid.commitment_hash,
+            winnerId: result.highestBid.userId,
+            winningAmount: result.highestBid.revealedAmount?.toString(),
+            winningHash: result.highestBid.commitmentHash,
             trigger: "AUTO_TIMER_EXPIRY",
           },
         });
       } else {
-        // No revealed bids
-        db.prepare(`UPDATE auctions SET current_stage = 'COMPLETED' WHERE id = ?`).run(auction.id);
-        recordAuditLog({
+        await recordAuditLog({
           action: "AUCTION_FINALIZE",
           severity: "WARN",
           details: {
@@ -97,4 +131,3 @@ export function syncAuctionStages(): void {
     console.error("Auction stage synchronization error:", err);
   }
 }
-

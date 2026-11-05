@@ -1,100 +1,145 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { recordAuditLog } from "@/lib/audit";
 
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser();
+
     if (!currentUser || currentUser.role !== "admin") {
-      return NextResponse.json({ error: "Akses ditolak. Hanya Admin yang dapat memfinalisasi lelang." }, { status: 403 });
+      return NextResponse.json(
+        {
+          error: "Akses ditolak. Hanya Admin yang dapat memfinalisasi lelang.",
+        },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
     const auctionId = Number(id);
-    const db = getDb();
 
-    const auction = db.prepare("SELECT * FROM auctions WHERE id = ?").get(auctionId) as
-      | { id: number; title: string; current_stage: string }
-      | undefined;
-
-    if (!auction) {
-      return NextResponse.json({ error: "Lelang tidak ditemukan." }, { status: 404 });
+    if (!Number.isSafeInteger(auctionId) || auctionId <= 0) {
+      return NextResponse.json(
+        { error: "ID lelang tidak valid." },
+        { status: 400 }
+      );
     }
 
-    // Determine highest valid revealed bid
-    const highestBid = db
-      .prepare(`
-        SELECT b.user_id, b.revealed_amount, b.commitment_hash, u.username
-        FROM bids b
-        JOIN users u ON b.user_id = u.id
-        WHERE b.auction_id = ? AND b.status = 'REVEALED'
-        ORDER BY b.revealed_amount DESC
-        LIMIT 1
-      `)
-      .get(auctionId) as
-      | { user_id: number; revealed_amount: number; commitment_hash: string; username: string }
-      | undefined;
+    const auction = await prisma.auction.findUnique({
+      where: {
+        id: auctionId,
+      },
+      select: {
+        id: true,
+        title: true,
+        currentStage: true,
+      },
+    });
 
-    if (highestBid) {
-      db.prepare(`
-        UPDATE auctions
-        SET current_stage = 'COMPLETED',
-            winner_id = ?,
-            winning_bid_amount = ?,
-            winning_bid_hash = ?
-        WHERE id = ?
-      `).run(highestBid.user_id, highestBid.revealed_amount, highestBid.commitment_hash, auctionId);
+    if (!auction) {
+      return NextResponse.json(
+        { error: "Lelang tidak ditemukan." },
+        { status: 404 }
+      );
+    }
 
-      recordAuditLog({
+    // Find the highest valid revealed bid.
+    const result = await prisma.$transaction(async (tx) => {
+      const highestBid = await tx.bid.findFirst({
+        where: {
+          auctionId,
+          status: "REVEALED",
+          revealedAmount: {
+            not: null,
+          },
+        },
+        orderBy: [
+          {
+            revealedAmount: "desc",
+          },
+          {
+            id: "asc",
+          },
+        ],
+        include: {
+          user: {
+            select: {
+              username: true,
+            },
+          },
+        },
+      });
+
+      await tx.auction.update({
+        where: {
+          id: auctionId,
+        },
+        data: {
+          currentStage: "COMPLETED",
+          winnerId: highestBid?.userId ?? null,
+          winningBidAmount: highestBid?.revealedAmount ?? null,
+          winningBidHash: highestBid?.commitmentHash ?? null,
+        },
+      });
+
+      return highestBid;
+    });
+
+    if (result) {
+      const winningAmount = Number(result.revealedAmount);
+
+      await recordAuditLog({
         userId: currentUser.id,
         userEmail: currentUser.email,
         action: "AUCTION_FINALIZE",
         severity: "INFO",
         details: {
           auctionId,
-          winnerId: highestBid.user_id,
-          winnerUsername: highestBid.username,
-          winningAmount: highestBid.revealed_amount,
-          winningHash: highestBid.commitment_hash,
+          winnerId: result.userId,
+          winnerUsername: result.user.username,
+          winningAmount,
+          winningHash: result.commitmentHash,
           manualFinalizeByAdmin: true,
         },
       });
 
       return NextResponse.json({
         success: true,
-        message: `Lelang resmi diselesaikan! Pemenang: ${highestBid.username} dengan tawaran valid Rp ${highestBid.revealed_amount.toLocaleString("id-ID")}`,
+        message: `Lelang resmi diselesaikan! Pemenang: ${result.user.username} dengan tawaran valid Rp ${winningAmount.toLocaleString("id-ID")}`,
         winner: {
-          username: highestBid.username,
-          amount: highestBid.revealed_amount,
-          hash: highestBid.commitment_hash,
+          username: result.user.username,
+          amount: winningAmount,
+          hash: result.commitmentHash,
         },
-      });
-    } else {
-      db.prepare(`UPDATE auctions SET current_stage = 'COMPLETED' WHERE id = ?`).run(auctionId);
-
-      recordAuditLog({
-        userId: currentUser.id,
-        userEmail: currentUser.email,
-        action: "AUCTION_FINALIZE",
-        severity: "WARN",
-        details: {
-          auctionId,
-          message: "Lelang ditutup tanpa pemenang (tidak ada bid yang di-reveal secara valid).",
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: "Lelang selesai. Tidak ada penawaran valid yang di-reveal.",
       });
     }
+
+    await recordAuditLog({
+      userId: currentUser.id,
+      userEmail: currentUser.email,
+      action: "AUCTION_FINALIZE",
+      severity: "WARN",
+      details: {
+        auctionId,
+        message:
+          "Lelang ditutup tanpa pemenang (tidak ada bid yang di-reveal secara valid).",
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Lelang selesai. Tidak ada penawaran valid yang di-reveal.",
+    });
   } catch (error) {
     console.error("Finalize error:", error);
-    return NextResponse.json({ error: "Gagal memfinalisasi lelang." }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Gagal memfinalisasi lelang." },
+      { status: 500 }
+    );
   }
 }
-

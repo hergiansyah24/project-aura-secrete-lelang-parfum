@@ -1,4 +1,4 @@
-# Aura Secrète — Lelang Parfum Langka
+# Riggisa parfume Secrète — Lelang Parfum Langka
 
 ## Deskripsi
 Aura Secrète adalah aplikasi web lelang parfum langka menggunakan mekanisme sealed bid. Pengguna dapat melihat lelang dan mengirim penawaran tertutup.
@@ -35,6 +35,16 @@ Aura Secrète adalah aplikasi web lelang parfum langka menggunakan mekanisme sea
 2. Siapkan `.env.local` dengan `JWT_SECRET` dan `ENCRYPTION_SECRET` yang masing-masing minimal 32 karakter.
 3. Jalankan `npm run dev`.
 4. Buka `http://localhost:3000`.
+
+## Bukti Pengerjaan Milestone 1
+
+Bukti pengujian antarmuka dan validasi disimpan di folder `docs/evidence/`.
+
+- **Responsivitas:** screenshot tampilan ponsel (390 px), tablet (768 px), dan desktop (1280 px).
+- **Aksesibilitas:** screenshot hasil Lighthouse Accessibility beserta kondisi pengujian.
+- **Validasi formulir:** screenshot pengujian validasi login dan registrasi.
+
+Bukti tersebut digunakan untuk mendokumentasikan hasil pengujian antarmuka pada Milestone 1.
 
 ## Pengujian
 Jalankan `npm run lint` dan `npm run build`. Uji tampilan pada lebar 390 px, 768 px, dan 1280 px. Dokumentasikan skor Lighthouse Accessibility, kondisi pengujian, serta bukti validasi form.
