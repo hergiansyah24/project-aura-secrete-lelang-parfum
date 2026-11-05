@@ -367,35 +367,84 @@ Seluruh bukti pengujian disimpan pada folder `docs/Tugas_2/bukti/`. Bukti dikelo
 ### 8.1 Bukti CRUD Auction
 
 1. `before menambahkan lelang parfume.png` — kondisi sebelum menambahkan lelang.
+
+   ![Kondisi sebelum menambahkan lelang](bukti/before%20menambahkan%20lelang%20parfume.png)
+
 2. `Create; after menambahkan parfume(adanotifnya).png` — kondisi setelah penambahan lelang.
+
+   ![Kondisi setelah penambahan lelang](bukti/Create;%20after%20menambahkan%20parfume(adanotifnya).png)
+
 3. `Read; daftar parfume di halamanAdmin.png` — tampilan daftar lelang pada halaman admin.
+
+   ![Tampilan daftar lelang pada halaman admin](bukti/Read;%20daftar%20parfume%20di%20halamanAdmin.png)
+
 4. `Update; perubahan nama parfume dan harganya.png` — bukti perubahan data lelang.
+
+   ![Bukti perubahan data lelang](bukti/Update;%20perubahan%20nama%20parfume%20dan%20harganya.png)
+
 5. `Delete; before menghapus parfume yang sudah ada.png` — kondisi sebelum penghapusan.
+
+   ![Kondisi sebelum penghapusan](bukti/Delete;%20before%20menghapus%20parfume%20yang%20sudah%20ada.png)
+
 6. `Delete; after mengahapus parfume.png` — kondisi setelah penghapusan.
+
+   ![Kondisi setelah penghapusan](bukti/Delete;%20after%20mengahapus%20parfume.png)
 
 ### 8.2 Bukti Validasi Server Zod
 
 1. `validasi-01-judul.png` — pengujian judul lelang yang tidak memenuhi batas minimum karakter.
+
+   ![Pengujian judul lelang yang tidak memenuhi batas minimum karakter](bukti/validasi-01-judul.png)
+
 2. `validasi-02-harga.png` — pengujian harga awal bernilai negatif.
+
+   ![Pengujian harga awal bernilai negatif](bukti/validasi-02-harga.png)
+
 3. `validasi-03-image.png` — pengujian URL gambar dengan protokol yang tidak diizinkan.
+
+   ![Pengujian URL gambar dengan protokol yang tidak diizinkan](bukti/validasi-03-image.png)
 
 ### 8.3 Bukti Database, Prisma, dan Seed
 
 1. `01_pengujian_prisma_validate.png` — hasil validasi skema Prisma.
+
+   ![Hasil validasi skema Prisma](bukti/01_pengujian_prisma_validate.png)
+
 2. `pengujian-prisma-migrate-status.png` — hasil pemeriksaan status migrasi.
+
+   ![Hasil pemeriksaan status migrasi](bukti/pengujian-prisma-migrate-status.png)
+
 3. `seed_data_berhasil.png` — bukti proses seed.
+
+   ![Bukti proses seed](bukti/seed_data_berhasil.png)
+
 4. `postgree_auction.png` — bukti tabel Auction pada PostgreSQL.
+
+   ![Bukti tabel Auction pada PostgreSQL](bukti/postgree_auction.png)
+
 5. `postgree_bids.png` — bukti tabel Bid pada PostgreSQL.
+
+   ![Bukti tabel Bid pada PostgreSQL](bukti/postgree_bids.png)
+
 6. `pengujian database 10-10.png` — dokumentasi pemeriksaan database.
+
+   ![Dokumentasi pemeriksaan database](bukti/pengujian%20database%2010-10.png)
 
 ### 8.4 Bukti Fitur Bid
 
 1. `ledger komitmen publik..png` — dokumentasi ledger komitmen penawaran.
+
+   ![Dokumentasi ledger komitmen penawaran](bukti/ledger%20komitmen%20publik..png)
+
 2. `riwayat penawaran pengguna..png` — dokumentasi riwayat penawaran pengguna.
+
+   ![Dokumentasi riwayat penawaran pengguna](bukti/riwayat%20penawaran%20pengguna..png)
 
 ### 8.5 Bukti Tambahan
 
 1. `pengujian judul,rumahParfume dan starrPrice.png` — dokumentasi pengujian input pada formulir lelang.
+
+   ![Dokumentasi pengujian input pada formulir lelang](bukti/pengujian%20judul,rumahParfume%20dan%20starrPrice.png)
 
 ## 9. Hasil Pengujian
 
