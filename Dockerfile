@@ -10,13 +10,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ENV DATABASE_URL=postgresql://build_dummy:build_dummy@127.0.0.1:5432/build_dummy
 RUN npx prisma generate
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV JWT_SECRET=build-only-placeholder-jwt-secret-at-least-32-chars
 ENV ENCRYPTION_SECRET=build-only-placeholder-encryption-secret-32chars
-ENV DATABASE_URL=postgresql://build_dummy:build_dummy@127.0.0.1:5432/build_dummy
 RUN npm run build
 
 FROM node:20-alpine AS runner
