@@ -175,7 +175,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan reconstructed baseline image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         continue-on-error: true
         with:
           image-ref: riggisa-parfume:baseline-${{ github.sha }}
@@ -187,7 +187,7 @@ jobs:
           severity: CRITICAL,HIGH,MEDIUM,LOW
 
       - name: Scan Docker image with Trivy (JSON)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         continue-on-error: true
         with:
           image-ref: riggisa-parfume:ci-${{ github.sha }}
@@ -199,7 +199,7 @@ jobs:
           severity: CRITICAL,HIGH,MEDIUM,LOW
 
       - name: Scan Docker image with Trivy (table)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         continue-on-error: true
         with:
           image-ref: riggisa-parfume:ci-${{ github.sha }}
@@ -222,7 +222,7 @@ jobs:
         run: docker save riggisa-parfume:ci-${{ github.sha }} -o riggisa-parfume-image.tar
 
       - name: Generate final image CRITICAL report
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: riggisa-parfume:ci-${{ github.sha }}
           format: table
@@ -249,7 +249,7 @@ jobs:
             sbom.cdx.json
 
       - name: Enforce no CRITICAL vulnerabilities in final image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: riggisa-parfume:ci-${{ github.sha }}
           format: table
