@@ -1,0 +1,62 @@
+=== LYNIS AUDIT FINDINGS AND TRANSPARENT WARNING ANALYSIS ===
+
+Environment: Ubuntu Linux (Iximiuz Labs VM)
+Auditor Tool: Lynis 3.1.6
+Final Hardening Index: 70
+
+------------------------------------------------------------
+1. REMAINING WARNINGS (DISCLOSED TRANSPARENTLY)
+------------------------------------------------------------
+
+* Warning 1: [KRNL-5830]
+  Text     : Reboot of system is most likely needed
+  Solution : reboot (https://cisofy.com/lynis/controls/KRNL-5830/)
+  Analysis : Pustaka inti dan komponen kernel menerima pembaruan paket selama
+             sesi hardening. Pada lingkungan lab sementara (Iximiuz Labs),
+             eksekusi reboot penuh akan menghentikan container/VM sandbox dan
+             menghapus sesi kerja. Oleh karena itu, kebutuhan reboot dicatat
+             secara transparan tanpa manipulasi.
+
+* Warning 2: [PKGS-7392]
+  Text     : Found one or more vulnerable packages.
+  Solution : apt-get update && apt-get upgrade / unattended-upgrades
+             (https://cisofy.com/lynis/controls/PKGS-7392/)
+  Analysis : Pembaruan paket dasar telah diaplikasikan (`apt update`). Kerentanan
+             yang tersisa bergantung pada rilis patch resmi hulu (upstream)
+             dari pengelola distribusi Debian/Ubuntu yang belum tersedia di repositori.
+             Dokumentasi mencatat ini sebagai item pemeliharaan berkala (patch management).
+
+* Warning 3: [FIRE-4512]
+  Text     : iptables module(s) loaded, but no rules active
+  Solution : Konfigurasi rule firewall aktif (https://cisofy.com/lynis/controls/FIRE-4512/)
+  Analysis : Modul kernel iptables terdeteksi aktif, namun tabel ruleset filter
+             kosong karena kebijakan isolasi port dilakukan pada tingkat boundary/routing
+             lab. Pada lingkungan deployment penuh, UFW / iptables ruleset diaktifkan
+             untuk menutup port selain SSH (22) dan Web (80/443).
+
+------------------------------------------------------------
+2. RESOLVED / HARDENED FINDINGS (BEFORE -> AFTER)
+------------------------------------------------------------
+
+* Hardening Score: Meningkat signifikan dari 61 menjadi 70 (+9 poin).
+* OpenSSH Configuration:
+  - PermitRootLogin             : [ OK ] (no)
+  - PasswordAuthentication       : [ OK ] (no)
+  - KbdInteractiveAuthentication : [ OK ] (no)
+  - PubkeyAuthentication         : [ OK ] (yes)
+  - ClientAliveCountMax          : [ OK ] (set to 2, was 3)
+  - LogLevel                     : [ OK ] (VERBOSE, was INFO)
+  - MaxAuthTries                 : [ OK ] (set to 3, was 50)
+  - MaxSessions                  : [ OK ] (set to 2, was 10)
+  - PrintLastLog                 : [ OK ] (set to yes, was no)
+  - TCPKeepAlive                 : [ OK ] (set to no, was yes)
+  - X11Forwarding                : [ OK ] (set to no, was yes)
+  - AllowAgentForwarding         : [ OK ] (set to no, was yes)
+* Intrusion Detection & Prevention:
+  - Fail2ban terinstalasi dan berstatus aktif (`fail2ban.service active`).
+  - Lynis mendeteksi: fail2ban [ Installed with jail.conf ], Fail2ban jails [ ENABLED ].
+  - Software component Intrusion software berubah dari [X] menjadi [V].
+* Time Synchronization:
+  - Warning [TIME-3185] pada audit awal berhasil tereliminasi pada audit akhir.
+* Permission Hardening:
+  - Permission direktori sudoers diperiksa dan disesuaikan.

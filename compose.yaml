@@ -1,0 +1,64 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Penegakan pengguna non-root (UID:GID 1001:1001 / nextjs:nodejs)
+    user: "1001:1001"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:?ENCRYPTION_SECRET is required}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Port app TIDAK dipublikasikan ke publik (0.0.0.0).
+    # Hanya di-expose secara internal ke dalam jaringan virtual container.
+    expose:
+      - "3000"
+    networks:
+      - app_internal
+    security_opt:
+      - no-new-privileges:true
+    # Pembatasan Linux Capabilities: drop seluruh kapabilitas kernel
+    cap_drop:
+      - ALL
+    # Proteksi sistem berkas: root filesystem read-only dengan writable ephemeral tmpfs
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  db:
+    image: postgres:16-alpine
+    user: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-riggisa}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    # Port database PostgreSQL 5432 TIDAK dipublikasikan ke host atau internet publik.
+    # Hanya dapat diakses secara privat oleh service 'app' di dalam internal network.
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_internal
+    security_opt:
+      - no-new-privileges:true
+    # Pembatasan Linux Capabilities pada container database
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  app_internal:
+    internal: true

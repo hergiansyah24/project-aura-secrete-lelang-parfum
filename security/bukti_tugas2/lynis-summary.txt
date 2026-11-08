@@ -1,0 +1,23 @@
+=== LYNIS AUDIT COMPARISON SUMMARY ===
+
+Environment : Ubuntu VM (Iximiuz Labs)
+User        : laborant
+Tool        : Lynis 3.1.6
+
+============================================================
+METRIC                   | BEFORE HARDENING | AFTER HARDENING
+============================================================
+Hardening Index          | 61               | 70
+Tests Performed          | 254              | 255
+Plugins Enabled          | 1                | 1
+Warnings                 | 4                | 3
+Suggestions              | 48               | 39
+Firewall Status          | ACTIVE           | ACTIVE
+Intrusion Detection      | [X] (None)       | [V] (Fail2ban)
+Malware Scanner          | [X]              | [X]
+============================================================
+
+CRITERIA EVALUATION:
+- Minimum Hardening Index >= 70 : PASSED (Final: 70)
+- SSH Key Auth Only             : PASSED (PermitRootLogin no, PasswordAuthentication no)
+- Lynis Evidence Preserved      : PASSED (lynis-before.txt, lynis-after.txt)

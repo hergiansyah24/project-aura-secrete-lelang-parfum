@@ -10,7 +10,8 @@
     "test:crypto": "node --env-file=.env.local --experimental-strip-types --test tests/crypto.test.ts",
     "test:validation": "node --experimental-strip-types --test tests/validation.test.ts",
     "seed": "node --env-file=.env --experimental-strip-types prisma/seed.ts",
-    "test:database": "node --env-file=.env --experimental-strip-types --test tests/database.test.ts"
+    "test:database": "node --env-file=.env --experimental-strip-types --test tests/database.test.ts",
+    "test:container": "node --experimental-strip-types --test tests/container-security.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
@@ -21,8 +22,8 @@
     "lucide-react": "^1.53.0",
     "next": "^16.4.3",
     "pg": "^8.23.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

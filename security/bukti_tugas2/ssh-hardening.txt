@@ -1,0 +1,28 @@
+=== SSH FINAL CONFIGURATION (sudo sshd -T) ===
+permitrootlogin no
+pubkeyauthentication yes
+passwordauthentication no
+kbdinteractiveauthentication no
+loglevel VERBOSE
+maxauthtries 3
+maxsessions 2
+clientalivecountmax 2
+clientaliveinterval 300
+tcpkeepalive no
+x11forwarding no
+allowagentforwarding no
+printlastlog yes
+
+=== SSH KEY-BASED AUTHENTICATION TEST ===
+Command:
+ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 laborant@127.0.0.1 'echo SSH_KEY_AUTH_OK'
+
+Actual Output:
+SSH_KEY_AUTH_OK
+
+=== FAIL2BAN SERVICE STATUS ===
+Command:
+sudo systemctl is-active fail2ban
+
+Actual Output:
+active

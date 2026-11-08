@@ -1,0 +1,260 @@
+name: Container Security
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - pemrograman-web
+      - security/hardening
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  container-security:
+    name: Build and scan container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run container security tests
+        run: npm run test:container
+
+      - name: Run Docker Compose container security checks
+        env:
+          DATABASE_URL: postgresql://ci_user:ci_password@db:5432/riggisa_ci
+          JWT_SECRET: ci-only-jwt-secret-not-for-production-32chars
+          ENCRYPTION_SECRET: ci-only-encryption-secret-not-prod-32chars
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: riggisa_ci
+        run: |
+          set -Eeuo pipefail
+          log_file=container-hardening-tests.txt
+          : > "$log_file"
+          compose_started=false
+
+          report_failure() {
+            status=$?
+            {
+              printf '\n=== container security test failure (exit %s) ===\n' "$status"
+              printf '\n=== docker compose ps ===\n'
+              docker compose ps || true
+              printf '\n=== docker compose logs ===\n'
+              docker compose logs --no-color app db || true
+            } | tee -a "$log_file"
+            return "$status"
+          }
+
+          cleanup() {
+            status=$?
+            if [ "$compose_started" = true ]; then
+              printf '\n=== cleanup: docker compose down -v ===\n' | tee -a "$log_file"
+              docker compose down -v --remove-orphans 2>&1 | tee -a "$log_file" || true
+            fi
+            exit "$status"
+          }
+
+          trap report_failure ERR
+          trap cleanup EXIT
+
+          {
+            echo '=== container hardening runtime tests ==='
+            echo '=== compose config port publication check ==='
+          } | tee -a "$log_file"
+          compose_config="$(docker compose config)"
+          printf '%s\n' "$compose_config" | tee -a "$log_file"
+          if printf '%s\n' "$compose_config" | grep -Eq '^\s*ports:'; then
+            echo 'FAIL: host port publication is configured.' | tee -a "$log_file"
+            exit 1
+          fi
+          echo 'PASS: app port 3000 and database port 5432 have no host port binding.' | tee -a "$log_file"
+
+          echo '=== docker compose up -d --build ===' | tee -a "$log_file"
+          docker compose up -d --build 2>&1 | tee -a "$log_file"
+          compose_started=true
+
+          app_health=starting
+          for attempt in $(seq 1 60); do
+            app_id="$(docker compose ps -q app)"
+            if [ -n "$app_id" ]; then
+              app_health="$(docker inspect --format '{{.State.Health.Status}}' "$app_id")"
+            fi
+            if [ "$app_health" = healthy ]; then
+              break
+            fi
+            if [ "$app_health" = unhealthy ]; then
+              echo 'FAIL: app healthcheck reported unhealthy.' | tee -a "$log_file"
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$app_health" = healthy
+          echo 'PASS: app healthcheck is healthy.' | tee -a "$log_file"
+
+          app_id="$(docker compose ps -q app)"
+          db_id="$(docker compose ps -q db)"
+          test "$(docker inspect --format '{{.Config.User}}' "$app_id")" = 1001:1001
+          echo 'PASS: app runs as UID 1001.' | tee -a "$log_file"
+          test "$(docker inspect --format '{{.Config.User}}' "$db_id")" = postgres
+          echo 'PASS: db runs as non-root user postgres.' | tee -a "$log_file"
+          test "$(docker inspect --format '{{json .HostConfig.CapDrop}}' "$app_id")" = '["ALL"]'
+          echo 'PASS: app has cap_drop ALL.' | tee -a "$log_file"
+          test "$(docker inspect --format '{{json .HostConfig.CapDrop}}' "$db_id")" = '["ALL"]'
+          echo 'PASS: db has cap_drop ALL.' | tee -a "$log_file"
+          docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$app_id" | grep -q 'no-new-privileges:true'
+          echo 'PASS: app has no-new-privileges.' | tee -a "$log_file"
+          docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$db_id" | grep -q 'no-new-privileges:true'
+          echo 'PASS: db has no-new-privileges.' | tee -a "$log_file"
+          test "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$app_id")" = true
+          echo 'PASS: app root filesystem is read-only.' | tee -a "$log_file"
+          echo '=== container hardening runtime tests completed ===' | tee -a "$log_file"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create transparent reconstructed baseline Dockerfile
+        run: |
+          cat > Dockerfile.baseline <<'EOF'
+          # Reconstructed pre-hardening baseline using the current source/dependencies.
+          # Intentionally omits USER, cap_drop, no-new-privileges, read_only, and healthcheck.
+          FROM node:20-alpine AS deps
+          RUN apk add --no-cache libc6-compat
+          WORKDIR /app
+          COPY package.json package-lock.json ./
+          RUN npm ci --ignore-scripts
+          FROM node:20-alpine AS builder
+          WORKDIR /app
+          COPY --from=deps /app/node_modules ./node_modules
+          COPY . .
+          RUN npx prisma generate
+          ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 JWT_SECRET=build-only-placeholder-jwt-secret-at-least-32-chars ENCRYPTION_SECRET=build-only-placeholder-encryption-secret-32chars DATABASE_URL=postgresql://build_dummy:***@127.0.0.1:5432/build_dummy
+          RUN npm run build
+          FROM node:20-alpine AS runner
+          WORKDIR /app
+          ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+          COPY --from=builder /app/public ./public
+          COPY --from=builder /app/.next/standalone ./
+          COPY --from=builder /app/.next/static ./.next/static
+          COPY --from=builder /app/generated ./generated
+          EXPOSE 3000
+          CMD ["node", "server.js"]
+          EOF
+
+      - name: Build reconstructed baseline image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.baseline
+          push: false
+          load: true
+          tags: riggisa-parfume:baseline-${{ github.sha }}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: riggisa-parfume:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan reconstructed baseline image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
+        with:
+          image-ref: riggisa-parfume:baseline-${{ github.sha }}
+          format: table
+          output: image-scan-before.txt
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+
+      - name: Scan Docker image with Trivy (JSON)
+        uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
+        with:
+          image-ref: riggisa-parfume:ci-${{ github.sha }}
+          format: json
+          output: trivy-report.json
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+
+      - name: Scan Docker image with Trivy (table)
+        uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
+        with:
+          image-ref: riggisa-parfume:ci-${{ github.sha }}
+          format: table
+          output: image-scan-after.txt
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+
+      - name: Generate CycloneDX SBOM with Syft
+        uses: anchore/sbom-action@v0.20.5
+        with:
+          image: riggisa-parfume:ci-${{ github.sha }}
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          upload-artifact: false
+
+      - name: Export Docker image
+        run: docker save riggisa-parfume:ci-${{ github.sha }} -o riggisa-parfume-image.tar
+
+      - name: Generate final image CRITICAL report
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: riggisa-parfume:ci-${{ github.sha }}
+          format: table
+          output: image-scan-after-critical.txt
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL
+
+      - name: Upload build, scan, and SBOM artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: riggisa-parfume-container-security-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            container-hardening-tests.txt
+            riggisa-parfume-image.tar
+            image-scan-before.txt
+            image-scan-after.txt
+            image-scan-after-critical.txt
+            trivy-report.json
+            sbom.cdx.json
+
+      - name: Enforce no CRITICAL vulnerabilities in final image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: riggisa-parfume:ci-${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL
+
