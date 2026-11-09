@@ -68,3 +68,41 @@ Hasil ini hanya menunjukkan keberhasilan skenario yang diuji. Hasil tersebut buk
 Saran AI perlu diperiksa kembali terhadap kode, dokumentasi, dan hasil pengujian yang sebenarnya. Pengembang bertanggung jawab memahami fungsi enkripsi, hashing, nonce, commitment, pengelolaan secret, serta dampak perubahan kode sebelum mengumpulkan tugas.
 
 AI tidak menggantikan pengujian mandiri maupun evaluasi keamanan menyeluruh. Secret produksi, token autentikasi, private key, dan data pribadi tidak boleh dicantumkan dalam dokumentasi atau catatan pemanfaatan AI.
+
+---
+
+## Catatan Pemanfaatan AI — Tugas 2 Kriptografi (Tag v0.2)
+
+**Mata kuliah:** Kriptografi
+**Tugas:** Tugas 2 — Enkripsi Terautentikasi dan Integritas Data
+**Milestone Tag:** `v0.2`
+**Proyek:** Riggisa Parfume Secrète — Aplikasi Lelang Parfum Berbasis Sealed-Bid
+
+### 1. Alat AI yang Digunakan
+Gemini & Antigravity (VS Code Terminal Agent).
+
+### 2. Tujuan Penggunaan
+- Perancangan spesifikasi parameter AEAD AES-256-GCM dengan dukungan Additional Authenticated Data (AAD) dan format IV/Tag berstandar industri.
+- Implementasi prinsip *fail-closed* pada fungsi `encryptAEAD` dan `decryptAEAD` di `lib/crypto.ts` untuk mencegah kebocoran data terdekripsi saat terjadi anomali integritas.
+- Pembuatan skenario uji negatif dan positif pada file `tests/aead-integrity.test.ts`.
+- Penyusunan struktur dokumentasi teknis keputusan desain kriptografi pada `KEPUTUSAN.md` sesuai Rubrik R2 (K1, K2, K3, K4).
+
+### 3. Ringkasan Perintah / Prompt yang Diberikan
+- Permintaan perancangan skema AEAD AES-256-GCM tanpa menghapus fungsi enkripsi data sensitif dan commitment hash yang sudah ada di `lib/crypto.ts`.
+- Permintaan pembuatan script uji mandiri yang memverifikasi kegagalan tertutup saat ciphertext, tag autentikasi, AAD, atau kunci diubah, serta validasi masukan cacat.
+- Permintaan penyusunan file `KEPUTUSAN.md` yang merinci pemetaan kebutuhan, parameter kriptografi, manajemen kunci, dan skenario uji.
+
+### 4. Bagian yang Dipakai dan Diubah oleh Mahasiswa
+- Penyesuaian skema AAD dengan domain lelang parfum Riggisa Parfume Secrète (`auctionId:<ID>|bidderId:<ID>|phase:<PHASE>`).
+- Verifikasi kompatibilitas backward terhadap fungsi eksis (`encryptSensitiveData`, `decryptSensitiveData`, `computeCommitmentHash`, `verifyCommitmentHash`, `generateSecureNonce`) dari Tugas 1 agar alur lelang tertutup tidak terganggu.
+- Penyesuaian penanganan exception tertutup agar tidak membocorkan detail teknis kriptografi ke pengguna akhir.
+
+### 5. Cara Memeriksa Kebenaran Hasil
+- Menjalankan pengujian otomatis mandiri:
+  ```bash
+  npx tsx tests/aead-integrity.test.ts
+  ```
+  Hasil pengujian menunjukkan seluruh **6 skenario uji lulus verifikasi (PASS)** dengan exit code 0.
+- Memeriksa penolakan *fail-closed* pada modifikasi bit ciphertext (*bit-flipping*), tag autentikasi, ketidakcocokan AAD lelang, kunci yang tidak sah, dan masukan cacat.
+- Memeriksa pengujian regresi Tugas 1 (`npm run test:crypto`) tetap lulus 6/6 tes.
+- Memeriksa `git status` dan `git diff` untuk memastikan tidak ada secret produksi asli yang tercantum dalam kode maupun dokumentasi.

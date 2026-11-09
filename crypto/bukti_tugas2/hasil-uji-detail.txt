@@ -1,0 +1,50 @@
+﻿================================================================================
+ PENGUJIAN INTEGRITAS & ENKRIPSI TERAUTENTIKASI (AEAD AES-256-GCM)
+ Domain: Riggisa Parfume Secr├¿te (Sealed-Bid Luxury Auction)
+ Mode  : DETAIL AKTIF (--detail)
+================================================================================
+
+[INFO] Plaintext Sintetis : {"bidAmount":2750000,"currency":"IDR","perfumeNote":"Extrait de Parfum Sealed Bid"}
+[INFO] AAD Sintetis        : auctionId:AUC-2026-09|bidderId:USR-SYNTH-88|phase:COMMIT
+
+Γ£ö Skenario 1 [POSITIF - BERHASIL]: Enkripsi & dekripsi valid menghasilkan plaintext identik.
+    Γö£ΓöÇΓöÇ IV (24 hex / 96-bit)  : 6e8c33ca422b3f286d258fe2
+    Γö£ΓöÇΓöÇ Tag (32 hex / 128-bit): 29b631252c407198ba0dbe85e6319a77
+    Γö£ΓöÇΓöÇ Ciphertext (hex)      : e16f6726a41e437fe492ba0db92c89dc... (166 chars)
+    ΓööΓöÇΓöÇ Hasil Dekripsi        : {"bidAmount":2750000,"currency":"IDR","perfumeNote":"Extrait de Parfum Sealed Bid"}
+Γ£ö Skenario 2 [NEGATIF - DITOLAK]: Ciphertext termodifikasi berhasil ditolak (fail-closed).
+    Γö£ΓöÇΓöÇ Asli Ciphertext : 492ef819b7e182f99890147a...
+    Γö£ΓöÇΓöÇ Cacat Bit-flip  : a92ef819b7e182f99890147a...
+    ΓööΓöÇΓöÇ Respon Eksepsi  : Fail-Closed: Integrity check failed or unauthorized decryption attempt
+Γ£ö Skenario 3 [NEGATIF - DITOLAK]: Tag autentikasi termodifikasi berhasil ditolak (fail-closed).
+    Γö£ΓöÇΓöÇ Asli Tag       : b5ef4fe54c18bab60479280afa3d8cf2
+    Γö£ΓöÇΓöÇ Cacat Tag      : f5ef4fe54c18bab60479280afa3d8cf2
+    ΓööΓöÇΓöÇ Respon Eksepsi : Fail-Closed: Integrity check failed or unauthorized decryption attempt
+Γ£ö Skenario 4 [NEGATIF - DITOLAK]: Konteks AAD tidak cocok berhasil ditolak (fail-closed).
+    Γö£ΓöÇΓöÇ AAD Terenkripsi : auctionId:AUC-2026-09|bidderId:USR-SYNTH-88|phase:COMMIT
+    Γö£ΓöÇΓöÇ AAD Diminta     : auctionId:AUC-2026-99|bidderId:USR-SYNTH-88|phase:COMMIT
+    ΓööΓöÇΓöÇ Respon Eksepsi  : Fail-Closed: Integrity check failed or unauthorized decryption attempt
+Γ£ö Skenario 5 [NEGATIF - DITOLAK]: Dekripsi dengan kunci yang salah berhasil ditolak (fail-closed).
+    Γö£ΓöÇΓöÇ Kunci Asli (SHA-256 digest) : [VALID-KEY]
+    Γö£ΓöÇΓöÇ Kunci Salah (CSPRNG kedua)  : f66ace23d7eafc9d...
+    ΓööΓöÇΓöÇ Respon Eksepsi              : Fail-Closed: Integrity check failed or unauthorized decryption attempt
+Γ£ö Skenario 6 [NEGATIF - DITOLAK]: Input tidak valid dan parameter cacat berhasil ditolak.
+    Γö£ΓöÇΓöÇ [Plaintext Kosong] Invalid input: plaintext and AAD must be non-empty strings
+    Γö£ΓöÇΓöÇ [AAD Kosong] Invalid input: plaintext and AAD must be non-empty strings
+    Γö£ΓöÇΓöÇ [IV Cacat] Fail-Closed: Invalid AEAD payload parameters
+    Γö£ΓöÇΓöÇ [Tag Cacat] Fail-Closed: Invalid AEAD payload parameters
+
+================================================================================
+ RINGKASAN HASIL PENGUJIAN AEAD INTEGRITAS (6 SKENARIO)
+================================================================================
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé (index) Γöé Skenario                               Γöé Kategori  Γöé Ekspektasi                                      Γöé Hasil                                       Γöé Status Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé 0       Γöé '1. Valid Key, IV, Tag, & AAD'         Γöé 'POSITIF' Γöé 'Dekripsi berhasil identik 100%'                Γöé 'Dekripsi sukses & data terverifikasi'      Γöé 'PASS' Γöé
+Γöé 1       Γöé '2. Tampered Ciphertext (Bit-flip)'    Γöé 'NEGATIF' Γöé 'Ditolak fail-closed (Integrity check failed)'  Γöé 'Ditolak: Fail-Closed exception tertangkap' Γöé 'PASS' Γöé
+Γöé 2       Γöé '3. Tampered Auth Tag (MAC)'           Γöé 'NEGATIF' Γöé 'Ditolak fail-closed (Tag verification failed)' Γöé 'Ditolak: Fail-Closed exception tertangkap' Γöé 'PASS' Γöé
+Γöé 3       Γöé '4. Mismatched AAD / Context Swapping' Γöé 'NEGATIF' Γöé 'Ditolak fail-closed (Context mismatch)'        Γöé 'Ditolak: Fail-Closed exception tertangkap' Γöé 'PASS' Γöé
+Γöé 4       Γöé '5. Wrong Key Decryption Attempt'      Γöé 'NEGATIF' Γöé 'Ditolak fail-closed (Unauthorized key)'        Γöé 'Ditolak: Fail-Closed exception tertangkap' Γöé 'PASS' Γöé
+Γöé 5       Γöé '6. Invalid Input & Malformed Params'  Γöé 'NEGATIF' Γöé 'Ditolak pada tahap validasi awal'              Γöé 'Ditolak: Validasi masukan gagal tertutup'  Γöé 'PASS' Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+HASIL AKHIR: SEMUA 6 SKENARIO UJI LULUS VERIFIKASI (PASS) DENGAN EXIT CODE 0.

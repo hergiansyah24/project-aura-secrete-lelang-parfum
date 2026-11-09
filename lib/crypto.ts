@@ -96,3 +96,111 @@ export function generateSecureNonce(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
+/** AES-256-GCM payload with a hexadecimal IV, ciphertext, and auth tag. */
+export interface AEADPayload {
+  iv: string;
+  ciphertext: string;
+  tag: string;
+  aad: string;
+}
+
+/**
+ * Derive a 256-bit AES key from an application secret.
+ * A 64-character hexadecimal CSPRNG secret is used directly; other valid
+ * secrets are deterministically reduced with SHA-256.
+ */
+export function deriveKeyFromSecret(secret = process.env.ENCRYPTION_SECRET): Buffer {
+  if (typeof secret !== "string" || secret.length < 32) {
+    throw new Error("Fail-Closed: ENCRYPTION_SECRET must be a string of at least 32 characters");
+  }
+
+  if (/^[0-9a-fA-F]{64}$/.test(secret)) {
+    return Buffer.from(secret, "hex");
+  }
+
+  return crypto.createHash("sha256").update(secret, "utf8").digest();
+}
+
+/** Encrypt plaintext with AES-256-GCM and bind it to the supplied AAD. */
+export function encryptAEAD(
+  plaintext: string,
+  aad: string,
+  customSecret?: string
+): AEADPayload {
+  if (
+    typeof plaintext !== "string" ||
+    plaintext.length === 0 ||
+    typeof aad !== "string" ||
+    aad.length === 0
+  ) {
+    throw new Error("Invalid input: plaintext and AAD must be non-empty strings");
+  }
+
+  const key = deriveKeyFromSecret(customSecret);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv, { authTagLength: 16 });
+  cipher.setAAD(Buffer.from(aad, "utf8"));
+
+  const ciphertext = Buffer.concat([
+    cipher.update(Buffer.from(plaintext, "utf8")),
+    cipher.final(),
+  ]);
+
+  return {
+    iv: iv.toString("hex"),
+    ciphertext: ciphertext.toString("hex"),
+    tag: cipher.getAuthTag().toString("hex"),
+    aad,
+  };
+}
+
+/** Decrypt an AEAD payload and fail closed on malformed or unauthenticated data. */
+export function decryptAEAD(
+  payload: AEADPayload,
+  expectedAAD: string,
+  customSecret?: string
+): string {
+  const isHex = (value: unknown) =>
+    typeof value === "string" && value.length > 0 && value.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(value);
+
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    typeof payload.aad !== "string" ||
+    payload.aad.length === 0 ||
+    typeof expectedAAD !== "string" ||
+    expectedAAD.length === 0 ||
+    !isHex(payload.iv) ||
+    payload.iv.length !== 24 ||
+    !isHex(payload.ciphertext) ||
+    !isHex(payload.tag) ||
+    payload.tag.length !== 32
+  ) {
+    throw new Error("Fail-Closed: Invalid AEAD payload parameters");
+  }
+
+  if (payload.aad !== expectedAAD) {
+    throw new Error("Fail-Closed: Integrity check failed or unauthorized decryption attempt");
+  }
+
+  try {
+    const key = deriveKeyFromSecret(customSecret);
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      key,
+      Buffer.from(payload.iv, "hex"),
+      { authTagLength: 16 }
+    );
+    decipher.setAAD(Buffer.from(expectedAAD, "utf8"));
+    decipher.setAuthTag(Buffer.from(payload.tag, "hex"));
+
+    const plaintext = Buffer.concat([
+      decipher.update(Buffer.from(payload.ciphertext, "hex")),
+      decipher.final(),
+    ]);
+    return plaintext.toString("utf8");
+  } catch {
+    throw new Error("Fail-Closed: Integrity check failed or unauthorized decryption attempt");
+  }
+}
+
