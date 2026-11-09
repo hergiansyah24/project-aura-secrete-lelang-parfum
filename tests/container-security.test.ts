@@ -12,9 +12,9 @@ test("Container Hardening: Dockerfile least privilege & non-root user", () => {
   const dockerfile = fs.readFileSync(dockerfilePath, "utf-8");
 
   // 1. Verifikasi multi-stage build
-  assert.match(dockerfile, /FROM node:20-alpine AS deps/i, "Wajib menggunakan multi-stage (stage deps)");
-  assert.match(dockerfile, /FROM node:20-alpine AS builder/i, "Wajib menggunakan multi-stage (stage builder)");
-  assert.match(dockerfile, /FROM node:20-alpine AS runner/i, "Wajib menggunakan multi-stage (stage runner)");
+  assert.match(dockerfile, /FROM node:22-alpine AS deps/i, "Wajib menggunakan multi-stage Node 22 (stage deps)");
+  assert.match(dockerfile, /FROM node:22-alpine AS builder/i, "Wajib menggunakan multi-stage Node 22 (stage builder)");
+  assert.match(dockerfile, /FROM node:22-alpine AS runner/i, "Wajib menggunakan multi-stage Node 22 (stage runner)");
 
   // 2. Verifikasi pembuatan user dan grup non-root (UID/GID 1001)
   assert.match(dockerfile, /addgroup\s+--system\s+--gid\s+1001\s+nodejs/, "Grup non-root nodejs (GID 1001) wajib dibuat");
